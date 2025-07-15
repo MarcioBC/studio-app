@@ -34,6 +34,7 @@ const userRoutes = require('./routes/userRoutes');
 app.use('/api/auth', authRoutes); // Login, Logout, Registro
 app.use('/api/companies', companyRoutes); // Registro de novas empresas
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
+console.log("Requisição recebida na rota raiz!");
 app.get('/register.html', (req, res) => res.sendFile(path.join(__dirname, 'public', 'register.html')));
 app.get('/register-company.html', (req, res) => res.sendFile(path.join(__dirname, 'public', 'register-company.html')));
 // Futuramente, a página de registro de empresa ficará aqui
@@ -62,4 +63,6 @@ app.get('/gerenciar-usuarios.html', (req, res) => res.sendFile(path.join(__dirna
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`Servidor a correr em http://localhost:${PORT}`);
+    console.log(`Servidor a correr na porta ${PORT}`);
+    console.log("Aplicativo pronto para receber requisições!"); // Adicione esta linha
 });
