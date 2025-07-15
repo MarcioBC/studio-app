@@ -1,0 +1,31 @@
+// middleware/authMiddleware.js
+
+const jwt = require('jsonwebtoken');
+
+const protect = (req, res, next) => {
+    const token = req.cookies.token;
+
+    if (token) {
+        try {
+            // Verifica se o token é válido
+            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+            // Adiciona os dados do usuário ao request para uso futuro
+            req.user = decoded; 
+            next(); // Permite o acesso à próxima rota
+        } catch (error) {
+            console.log("Token inválido ou expirado.");
+            res.redirect('/index.html'); // Se o token for inválido, manda para o login
+        }
+    } else {
+        // Se não houver token, manda para o login
+        console.log("Acesso negado, nenhum token fornecido.");
+        // Verifica se a requisição é para uma API ou para uma página
+        if (req.originalUrl.startsWith('/api')) {
+             res.status(401).json({ message: 'Não autorizado, nenhum token.' });
+        } else {
+            res.redirect('/index.html');
+        }
+    }
+};
+
+module.exports = { protect };

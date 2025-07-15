@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Studio Je Marqui - Dashboard</title>
+    <link rel="stylesheet" href="/css/global.css">
+    <link rel="stylesheet" href="/css/clientes.css">
+    <link rel="stylesheet" href="/css/agendamentos.css">
+    <link rel="stylesheet" href="/css/dashboard.css">
+</head>
+<body>
+    <button class="menu-toggle" id="menuToggle">☰</button>
+    <div class="dashboard-container">
+        <aside class="sidebar" id="sidebar">
+            <h2>Studio Je Marqui</h2>
+            <nav>
+                <ul>
+                    <li><a href="/dashboard.html" class="active">Dashboard</a></li>
+                    <li><a href="/clientes.html">Clientes</a></li>
+                    <li><a href="/agendamentos.html">Agendamentos</a></li>
+                    <li><a href="/livro-caixa.html">Livro Caixa</a></li>
+                    <li><a href="/relatorios.html">Relatórios</a></li>
+                    <li><a href="/profissionais.html">Gerenciar profissionais</a></li> 
+                    <li><a href="/gerenciar-usuarios.html">Gerenciar Usuários</a></li>
+                    <li style="margin-top: auto;"><a href="/api/auth/logout" style="color: #ffc107;">Sair</a></li> 
+    </ul>
+                </ul>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <header class="header">
+                <h1>Dashboard</h1>
+            </header>
+
+            <section class="dashboard-cards">
+                <div class="dashboard-card card-hoje">
+                    <h3>Agendamentos de Hoje</h3>
+                    <p class="count" id="totalHoje">0</p>
+                </div>
+                <div class="dashboard-card card-semana">
+                    <h3>Na Semana</h3>
+                    <p class="count" id="totalSemana">0</p>
+                </div>
+                <div class="dashboard-card card-confirmados">
+                    <h3>Confirmados</h3>
+                    <p class="count" id="totalConfirmados">0</p>
+                </div>
+                <div class="dashboard-card card-concluidos">
+                    <h3>Concluídos</h3>
+                    <p class="count" id="totalConcluidos">0</p>
+                </div>
+            </section>
+
+            <section class="client-list-container">
+                <h2>Agenda do Dia</h2>
+                <div id="hojeList">
+                    <p>Carregando agendamentos de hoje...</p>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="/js/main.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // A lógica do menu foi removida daqui e está no main.js
+
+            const formatAsCurrency = (value) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+
+            async function fetchDashboardSummary() {
+                try {
+                    const response = await fetch('/api/agendamentos/summary/dashboard');
+                    const summary = await response.json();
+                    document.getElementById('totalHoje').textContent = summary.hoje || 0;
+                    document.getElementById('totalSemana').textContent = summary.semana || 0;
+                    document.getElementById('totalConfirmados').textContent = summary.confirmados || 0;
+                    document.getElementById('totalConcluidos').textContent = summary.concluidos || 0;
+                } catch (error) {
+                    console.error("Erro ao buscar resumo do dashboard:", error);
+                }
+            }
+
+            async function fetchHojeAgendamentos() {
+                const hojeListDiv = document.getElementById('hojeList');
+                hojeListDiv.innerHTML = '<p>Carregando agendamentos de hoje...</p>';
+                try {
+                    const response = await fetch('/api/agendamentos/hoje');
+                    const agendamentos = await response.json();
+                    hojeListDiv.innerHTML = '';
+                    if (agendamentos.length === 0) {
+                        hojeListDiv.innerHTML = '<p>Nenhum agendamento para hoje.</p>';
+                        return;
+                    }
+                    agendamentos.forEach(ag => {
+                        const card = document.createElement('div');
+                        card.className = 'client-card';
+                        const horaFormatada = new Date(ag.dataAgendamento).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                        const nomesProcedimentos = ag.procedimentos.map(p => p.nome).join(', ');
+                        const statusClass = `status-${(ag.status || 'pendente').toLowerCase().replace('ú', 'u')}`;
+                        card.innerHTML = `
+                            <div style="flex: 1;">
+                                <strong>${horaFormatada} - ${ag.cliente ? ag.cliente.nome : 'Cliente Removido'}</strong><br>
+                                <small><b>Procedimentos:</b> ${nomesProcedimentos}</small><br>
+                                <small><b>Profissional:</b> ${ag.profissional} - <b>Sala:</b> ${ag.sala}</small>
+                            </div>
+                            <div style="text-align: right;">
+                                <span class="status ${statusClass}">${ag.status}</span>
+                                <p style="margin:10px 0 0 0; font-weight: bold;">${formatAsCurrency(ag.valorTotal)}</p>
+                            </div>
+                        `;
+                        hojeListDiv.appendChild(card);
+                    });
+                } catch (error) {
+                    console.error("Erro ao buscar agendamentos de hoje:", error);
+                    hojeListDiv.innerHTML = '<p style="color:red;">Erro ao carregar a agenda do dia.</p>';
+                }
+            }
+
+            fetchDashboardSummary();
+            fetchHojeAgendamentos();
+        });
+    </script>
+</body>
+</html>

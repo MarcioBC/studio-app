@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Studio Je Marqui - Relatórios</title>
+    <link rel="stylesheet" href="/css/global.css">
+    <link rel="stylesheet" href="/css/clientes.css">
+    <link rel="stylesheet" href="/css/relatorios.css">
+</head>
+<body>
+    <button class="menu-toggle" id="menuToggle">☰</button>
+    <div class="dashboard-container">
+        <aside class="sidebar" id="sidebar">
+            <h2>Studio Je Marqui</h2>
+            <nav>
+                <ul>
+                    <li><a href="/dashboard.html">Dashboard</a></li>
+                    <li><a href="/clientes.html">Clientes</a></li>
+                    <li><a href="/agendamentos.html">Agendamentos</a></li>
+                     <li><a href="/livro-caixa.html">Livro Caixa</a></li>
+                    <li><a href="/relatorios.html" class="active">Relatórios</a></li>
+                    <li><a href="/profissionais.html">Gerenciar profissionais</a></li>
+                    <li><a href="/gerenciar-usuarios.html">Gerenciar Usuários</a></li>
+                    <li style="margin-top: auto;"><a href="/api/auth/logout" style="color: #ffc107;">Sair</a></li> 
+                </ul>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <header class="header">
+                <h1>Relatórios</h1>
+            </header>
+
+            <section class="filtros-container">
+                <h3>Filtros Gerais</h3>
+                <div class="form-row">
+                    <div class="form-group form-group-half">
+                        <label for="dataInicio">Data de Início</label>
+                        <input type="date" id="dataInicio" name="dataInicio">
+                    </div>
+                    <div class="form-group form-group-half">
+                        <label for="dataFim">Data de Fim</label>
+                        <input type="date" id="dataFim" name="dataFim">
+                    </div>
+                </div>
+                 <div class="gerar-relatorio-container">
+                    <button id="gerarRelatorioBtn" class="btn-primary">Gerar Relatório</button>
+                </div>
+            </section>
+
+            <nav class="tab-nav">
+                <button class="tab-button active" data-tab="agendamentos">Relatório de Agendamentos</button>
+                <button class="tab-button" data-tab="financeiro">Relatório Financeiro</button>
+            </nav>
+
+            <div id="paneAgendamentos" class="tab-pane active">
+                <section class="client-list-container">
+                    <div class="status-filters agendamento-filters">
+    <button class="btn-filter active" data-status="Todos">Todos</button>
+    <button class="btn-filter" data-status="Pendente">Pendentes</button>
+    <button class="btn-filter" data-status="Confirmado">Confirmados</button>
+    <button class="btn-filter" data-status="Concluído">Concluídos</button>
+</div>
+                    <div id="resultadoAgendamentos" style="margin-top: 20px;">
+                        <p>Selecione os filtros e clique em "Gerar Relatório".</p>
+                    </div>
+                </section>
+            </div>
+
+            <div id="paneFinanceiro" class="tab-pane">
+            <section class="client-list-container">   
+                <div class="status-filters report-filters">
+                    <button class="btn-filter active" data-filter="todos">Todos</button>
+                    <button class="btn-filter" data-filter="receitas">Apenas Receitas</button>
+                    <button class="btn-filter" data-filter="despesas">Apenas Despesas</button>
+                </div>
+               
+            <div id="financeiro-initial-message" style="margin-top: 20px;">
+                    <p>Selecione os filtros e clique em "Gerar Relatório".</p>
+                    </div>
+                 </section> 
+                </div>
+
+                <div id="report-loader" class="hidden">
+                    <p>Gerando relatório financeiro...</p>
+                </div>
+
+                <div id="report-container" class="report-container hidden">
+                    <header class="report-header">
+                        <h2>Relatório Financeiro</h2>
+                        <h3>Studio Je Marqui</h3>
+                        <p id="report-periodo"></p>
+                    </header>
+
+                    <section class="summary-cards">
+                        <div class="card">
+                            <h4>Receitas no Período</h4>
+                            <p id="summary-receitas" class="amount receitas">R$ 0,00</p>
+                        </div>
+                        <div class="card">
+                            <h4>Despesas no Período</h4>
+                            <p id="summary-despesas" class="amount despesas">R$ 0,00</p>
+                        </div>
+                        <div class="card">
+                            <h4>Saldo do Período</h4>
+                            <p id="summary-saldo" class="amount saldo">R$ 0,00</p>
+                        </div>
+                    </section>
+
+                    <section id="section-receitas" class="report-section">
+                        <h3>Receitas Detalhadas</h3>
+                        <table class="report-table">
+                            <thead>
+                                <tr>
+                                    <th>Data</th>
+                                    <th>Descrição</th>
+                                    <th class="text-right">Valor</th>
+                                </tr>
+                            </thead>
+                            <tbody id="receitas-table-body"></tbody>
+                            <tfoot>
+                                <tr>
+                                    <td colspan="2" class="text-right"><strong>Total de Receitas</strong></td>
+                                    <td id="total-table-receitas" class="text-right"><strong>R$ 0,00</strong></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </section>
+
+                    <section id="section-despesas" class="report-section">
+                        <h3>Despesas Detalhadas</h3>
+                        <table class="report-table">
+                            <thead>
+                                <tr>
+                                    <th>Data</th>
+                                    <th>Descrição</th>
+                                    <th class="text-right">Valor</th>
+                                </tr>
+                            </thead>
+                            <tbody id="despesas-table-body"></tbody>
+                            <tfoot>
+                                <tr>
+                                    <td colspan="2" class="text-right"><strong>Total de Despesas</strong></td>
+                                    <td id="total-table-despesas" class="text-right"><strong>R$ 0,00</strong></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </section>
+                    
+                    <div class="report-actions">
+                        <button id="print-report-btn" class="btn-secondary">Imprimir Relatório</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="/js/main.js"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const dataInicioInput = document.getElementById('dataInicio');
+        const dataFimInput = document.getElementById('dataFim');
+        const gerarRelatorioBtn = document.getElementById('gerarRelatorioBtn');
+        const tabNav = document.querySelector('.tab-nav');
+        let activeTab = 'agendamentos';
+        
+        // --- LÓGICA DA ABA DE AGENDAMENTOS (INTOCADA) ---
+        const agendamentoFilters = document.querySelector('.agendamento-filters');
+        const resultadoAgendamentosDiv = document.getElementById('resultadoAgendamentos');
+        let statusAgendamentoSelecionado = 'Todos';
+
+        // --- ELEMENTOS DA NOVA ABA FINANCEIRA ---
+        const financeiroInitialMsg = document.getElementById('financeiro-initial-message');
+        const reportLoader = document.getElementById('report-loader');
+        const reportContainer = document.getElementById('report-container');
+        const printReportBtn = document.getElementById('print-report-btn');
+        const filterButtons = document.querySelectorAll('.btn-filter');
+
+        const formatAsCurrency = (value) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+
+        function setDefaultDates() {
+            const hoje = new Date();
+            const primeiroDia = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+            const ultimoDia = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0);
+            dataInicioInput.value = primeiroDia.toISOString().split('T')[0];
+            dataFimInput.value = ultimoDia.toISOString().split('T')[0];
+        }
+
+        if (tabNav) {
+            tabNav.addEventListener('click', (e) => {
+                if (e.target.tagName === 'BUTTON') {
+                    activeTab = e.target.dataset.tab;
+                    tabNav.querySelector('.active').classList.remove('active');
+                    e.target.classList.add('active');
+
+                    document.querySelector('.tab-pane.active').classList.remove('active');
+                    document.getElementById(`pane${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}`).classList.add('active');
+                }
+            });
+        }
+        
+        if (agendamentoFilters) {
+            agendamentoFilters.addEventListener('click', (e) => {
+                if (e.target.tagName === 'BUTTON') {
+                    agendamentoFilters.querySelector('.active').classList.remove('active');
+                    e.target.classList.add('active');
+                    statusAgendamentoSelecionado = e.target.dataset.status;
+                }
+            });
+        }
+        
+        if (gerarRelatorioBtn) {
+            gerarRelatorioBtn.addEventListener('click', () => {
+                if (activeTab === 'agendamentos') {
+                    gerarRelatorioAgendamentos();
+                } else if (activeTab === 'financeiro') {
+                    gerarRelatorioFinanceiro();
+                }
+            });
+        }
+        
+        // --- FUNÇÕES DA ABA DE AGENDAMENTOS (INTOCADAS) ---
+        async function gerarRelatorioAgendamentos() {
+            resultadoAgendamentosDiv.innerHTML = '<p>Gerando relatório de agendamentos...</p>';
+            const dataInicio = dataInicioInput.value;
+            const dataFim = dataFimInput.value;
+            const url = `/api/agendamentos/relatorio?dataInicio=${dataInicio}&dataFim=${dataFim}&status=${statusAgendamentoSelecionado}`;
+            try {
+                const response = await fetch(url);
+                const agendamentos = await response.json();
+                renderTabelaAgendamentos(agendamentos);
+            } catch (error) {
+                resultadoAgendamentosDiv.innerHTML = '<p style="color:red;">Erro ao gerar relatório de agendamentos.</p>';
+            }
+        }
+
+        function renderTabelaAgendamentos(agendamentos) {
+            if (agendamentos.length === 0) {
+                resultadoAgendamentosDiv.innerHTML = '<p>Nenhum agendamento encontrado para os filtros selecionados.</p>';
+                return;
+            }
+            let tabelaHTML = `<table class="relatorio-tabela"><thead><tr><th>Data</th><th>Cliente</th><th>Procedimentos</th><th>Profissional</th><th>Valor</th><th>Status</th></tr></thead><tbody>`;
+            agendamentos.forEach(ag => {
+                const dataFormatada = new Date(ag.dataAgendamento).toLocaleDateString('pt-BR', {day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC'});
+                tabelaHTML += `
+                    <tr>
+                        <td>${dataFormatada}</td>
+                        <td>${ag.cliente ? ag.cliente.nome : 'N/A'}</td>
+                        <td>${ag.procedimentos.map(p => p.nome).join(', ')}</td>
+                        <td>${ag.profissional}</td>
+                        <td>${formatAsCurrency(ag.valorTotal)}</td>
+                        <td>${ag.status}</td>
+                    </tr>
+                `;
+            });
+            tabelaHTML += '</tbody></table>';
+            resultadoAgendamentosDiv.innerHTML = tabelaHTML;
+        }
+
+        // --- FUNÇÕES DA NOVA ABA FINANCEIRA ---
+        async function gerarRelatorioFinanceiro() {
+            financeiroInitialMsg.classList.add('hidden');
+            reportContainer.classList.add('hidden');
+            reportLoader.classList.remove('hidden');
+
+            const dataInicio = dataInicioInput.value;
+            const dataFim = dataFimInput.value;
+            const url = `/api/transacoes/relatorio?dataInicio=${dataInicio}&dataFim=${dataFim}`;
+            try {
+                const response = await fetch(url);
+                const relatorio = await response.json();
+                if (!response.ok) throw new Error(relatorio.message || 'Erro ao buscar dados.');
+                
+                renderRelatorioFinanceiro(relatorio, dataInicio, dataFim);
+                reportContainer.classList.remove('hidden');
+            } catch (error) {
+                alert(error.message);
+                financeiroInitialMsg.classList.remove('hidden');
+            } finally {
+                reportLoader.classList.add('hidden');
+            }
+        }
+
+        function renderRelatorioFinanceiro(relatorio, dataInicio, dataFim) {
+            const fDataInicio = new Date(dataInicio + 'T03:00:00').toLocaleDateString('pt-BR');
+            const fDataFim = new Date(dataFim + 'T03:00:00').toLocaleDateString('pt-BR');
+            document.getElementById('report-periodo').textContent = `Período: ${fDataInicio} a ${fDataFim}`;
+
+            const { totalReceitas, totalDespesas, saldo } = relatorio.summary;
+            document.getElementById('summary-receitas').textContent = formatAsCurrency(totalReceitas);
+            document.getElementById('summary-despesas').textContent = formatAsCurrency(totalDespesas);
+            document.getElementById('summary-saldo').textContent = formatAsCurrency(saldo);
+            document.getElementById('summary-saldo').style.color = saldo >= 0 ? 'green' : 'red';
+
+            const receitasBody = document.getElementById('receitas-table-body');
+            receitasBody.innerHTML = '';
+            relatorio.receitas.forEach(t => {
+                const row = receitasBody.insertRow();
+                row.innerHTML = `<td>${new Date(t.data).toLocaleDateString('pt-BR', {timeZone: 'UTC'})}</td><td>${t.descricao}</td><td class="text-right">${formatAsCurrency(t.valor)}</td>`;
+            });
+            document.getElementById('total-table-receitas').innerHTML = `<strong>${formatAsCurrency(totalReceitas)}</strong>`;
+
+            const despesasBody = document.getElementById('despesas-table-body');
+            despesasBody.innerHTML = '';
+            relatorio.despesas.forEach(t => {
+                const row = despesasBody.insertRow();
+                row.innerHTML = `<td>${new Date(t.data).toLocaleDateString('pt-BR', {timeZone: 'UTC'})}</td><td>${t.descricao}</td><td class="text-right">${formatAsCurrency(t.valor)}</td>`;
+            });
+            document.getElementById('total-table-despesas').innerHTML = `<strong>${formatAsCurrency(totalDespesas)}</strong>`;
+        }
+
+        filterButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                filterButtons.forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+                const filter = button.dataset.filter;
+                const sectionReceitas = document.getElementById('section-receitas');
+                const sectionDespesas = document.getElementById('section-despesas');
+
+                sectionReceitas.style.display = (filter === 'todos' || filter === 'receitas') ? '' : 'none';
+                sectionDespesas.style.display = (filter === 'todos' || filter === 'despesas') ? '' : 'none';
+            });
+        });
+
+        printReportBtn.addEventListener('click', () => {
+            window.print();
+        });
+
+        setDefaultDates();
+    });
+    </script>
+</body>
+</html>

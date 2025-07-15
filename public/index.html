@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Studio Je Marqui</title>
+    <link rel="stylesheet" href="/css/global.css">
+    <link rel="stylesheet" href="/css/auth.css">
+</head>
+<body>
+    <div class="auth-container">
+        <h1>Login</h1>
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="email">E-mail</label>
+                <input type="email" id="email" name="email" required>
+            </div>
+            <div class="form-group">
+                <label for="senha">Senha</label>
+                <input type="password" id="senha" name="senha" required>
+            </div>
+            <button type="submit" class="btn-primary">Entrar</button>
+        </form>
+        <div id="statusMessage" style="margin-top: 15px;"></div>
+        <div class="auth-link">
+    <p>É sua primeira vez aqui? <a href="/register-company.html">Crie a conta da sua empresa</a></p>
+</div>
+    </div>
+
+    <script>
+        const loginForm = document.getElementById('loginForm');
+        const statusMessage = document.getElementById('statusMessage');
+
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const senha = document.getElementById('senha').value;
+            
+            statusMessage.textContent = 'A entrar...';
+            statusMessage.style.color = 'gray';
+
+            try {
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, senha })
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    statusMessage.textContent = 'Login bem-sucedido! A entrar no sistema...';
+                    statusMessage.style.color = 'green';
+                    // Redireciona para o dashboard após o login
+                    window.location.href = '/dashboard.html';
+                } else {
+                    statusMessage.textContent = `Erro: ${result.message}`;
+                    statusMessage.style.color = 'red';
+                }
+            } catch (error) {
+                statusMessage.textContent = 'Erro de conexão. Tente novamente.';
+                statusMessage.style.color = 'red';
+            }
+        });
+    </script>
+</body>
+</html>

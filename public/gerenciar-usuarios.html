@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Studio Je Marqui - Gerenciar Usuários</title>
+    <link rel="stylesheet" href="/css/global.css">
+    <link rel="stylesheet" href="/css/clientes.css">
+    <link rel="stylesheet" href="/css/gerenciar-usuarios.css"> 
+</head>
+<body>
+    <button class="menu-toggle" id="menuToggle">☰</button>
+    <div class="dashboard-container">
+        <aside class="sidebar" id="sidebar">
+            <h2>Studio Je Marqui</h2>
+            <nav>
+                <ul>
+                    <li><a href="/dashboard.html">Dashboard</a></li>
+                    <li><a href="/clientes.html">Clientes</a></li>
+                    <li><a href="/agendamentos.html">Agendamentos</a></li>
+                    <li><a href="/livro-caixa.html">Livro Caixa</a></li>
+                    <li><a href="/relatorios.html">Relatórios</a></li>
+                    <li><a href="/profissionais.html">Gerenciar Profissionais</a></li>
+                    <li><a href="/gerenciar-usuarios.html" class="active">Gerenciar Usuários</a></li>
+                    <li style="margin-top: auto;"><a href="/api/auth/logout" style="color: #ffc107;">Sair</a></li>
+                </ul>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <header class="header">
+                <h1>Gerenciar Usuários</h1>
+            </header>
+
+            <section class="user-form-container">
+                <h3>Adicionar Novo Usuário</h3>
+                <form id="userForm" class="form-row">
+    <div class="form-group form-group-nome">
+        <label for="nome">Nome Completo</label>
+        <input type="text" id="nome" name="nome" required autocomplete="off">
+    </div>
+    <div class="form-group form-group-email">
+        <label for="email">E-mail</label>
+        <input type="email" id="email" name="email" required autocomplete="off">
+    </div>
+    <div class="form-group form-group-senha">
+        <label for="senha">Senha</label>
+        <input type="password" id="senha" name="senha" required>
+    </div>
+    <div class="form-actions">
+        <button type="submit" class="btn-primary">Adicionar</button>
+    </div>
+</form>
+                 <div id="formStatus" class="status-message"></div>
+            </section>
+
+            <section class="client-list-container">
+                <h2>Usuários Cadastrados</h2>
+                <div id="userList">
+                    <p>Carregando...</p>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <div id="editUserModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span class="close-btn" id="closeEditModal">&times;</span>
+            <h2>Editar Usuário</h2>
+            <form id="editUserForm">
+                <input type="hidden" id="editUserId" name="id">
+                <div class="form-group">
+                    <label for="editNome">Nome Completo</label>
+                    <input type="text" id="editNome" name="nome" required>
+                </div>
+                <div class="form-group">
+                    <label for="editEmail">E-mail</label>
+                    <input type="email" id="editEmail" name="email" required>
+                </div>
+                <div class="form-actions" style="text-align: right;">
+                    <button type="submit" class="btn-primary">Salvar Alterações</button>
+                </div>
+            </form>
+            <div id="editFormStatus" class="status-message"></div>
+        </div>
+    </div>
+
+    <script src="/js/main.js"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const userForm = document.getElementById('userForm');
+        const userListDiv = document.getElementById('userList');
+        const formStatus = document.getElementById('formStatus');
+        const editUserModal = document.getElementById('editUserModal');
+        const closeEditModalBtn = document.getElementById('closeEditModal');
+        const editUserForm = document.getElementById('editUserForm');
+        const editFormStatus = document.getElementById('editFormStatus');
+        
+        function displayStatus(element, message, isError = false) {
+            element.textContent = message;
+            element.style.display = 'block';
+            element.className = 'status-message';
+            element.classList.add(isError ? 'status-error' : 'status-success');
+            setTimeout(() => { element.style.display = 'none'; }, 3000);
+        }
+
+        async function fetchAndRenderUsers() {
+            userListDiv.innerHTML = '<p>Carregando...</p>';
+            try {
+                const response = await fetch('/api/users');
+                const users = await response.json();
+                userListDiv.innerHTML = '';
+                if (users.length === 0) {
+                    userListDiv.innerHTML = '<p>Nenhum usuário cadastrado.</p>';
+                    return;
+                }
+                users.forEach(user => {
+                    const item = document.createElement('div');
+                    item.className = 'client-card';
+                    item.innerHTML = `<div><strong>${user.nome}</strong><br><small>${user.email}</small></div><div class="action-icons"><span class="icon-edit" data-id="${user._id}" title="Editar">✏️</span><span class="icon-delete" data-id="${user._id}" title="Excluir">🗑️</span></div>`;
+                    userListDiv.appendChild(item);
+                });
+            } catch (error) {
+                userListDiv.innerHTML = '<p style="color:red;">Erro ao carregar usuários.</p>';
+            }
+        }
+
+        userForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const nome = document.getElementById('nome').value;
+            const email = document.getElementById('email').value;
+            const senha = document.getElementById('senha').value;
+            try {
+                const response = await fetch('/api/users', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nome, email, senha })
+                });
+                const result = await response.json();
+                displayStatus(formStatus, result.message, !response.ok);
+                if (response.ok) {
+                    userForm.reset();
+                    fetchAndRenderUsers();
+                }
+            } catch (error) {
+                displayStatus(formStatus, 'Erro de conexão.', true);
+            }
+        });
+
+        userListDiv.addEventListener('click', async (e) => {
+            const target = e.target;
+            const id = target.dataset.id;
+            if (!id) return;
+
+            if (target.classList.contains('icon-delete')) {
+                if (confirm('Tem certeza que deseja excluir este usuário?')) {
+                    try {
+                        const response = await fetch(`/api/users/${id}`, { method: 'DELETE' });
+                        const result = await response.json();
+                        alert(result.message);
+                        if (response.ok) fetchAndRenderUsers();
+                    } catch (error) { alert('Erro de conexão ao excluir.'); }
+                }
+            }
+            if (target.classList.contains('icon-edit')) {
+                try {
+                    const response = await fetch(`/api/users/${id}`);
+                    const user = await response.json();
+                    if(response.ok) {
+                        document.getElementById('editUserId').value = user._id;
+                        document.getElementById('editNome').value = user.nome;
+                        document.getElementById('editEmail').value = user.email;
+                        editUserModal.style.display = 'flex';
+                    } else { alert(`Erro: ${user.message}`); }
+                } catch (error) { alert('Erro ao buscar dados do usuário.'); }
+            }
+        });
+        
+        editUserForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('editUserId').value;
+            const nome = document.getElementById('editNome').value;
+            const email = document.getElementById('editEmail').value;
+            try {
+                const response = await fetch(`/api/users/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nome, email })
+                });
+                const result = await response.json();
+                displayStatus(editFormStatus, result.message, !response.ok);
+                if(response.ok) {
+                    editUserModal.style.display = 'none';
+                    fetchAndRenderUsers();
+                }
+            } catch(error) {
+                displayStatus(editFormStatus, 'Erro de conexão.', true);
+            }
+        });
+
+        closeEditModalBtn.addEventListener('click', () => { editUserModal.style.display = 'none'; });
+        window.addEventListener('click', (e) => { if (e.target == editUserModal) { editUserModal.style.display = 'none'; } });
+
+        fetchAndRenderUsers();
+    });
+    </script>
+</body>
+</html>

@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Studio Je Marqui - Livro Caixa</title>
+    <link rel="stylesheet" href="/css/global.css">
+    <link rel="stylesheet" href="/css/clientes.css">
+    <link rel="stylesheet" href="/css/livro-caixa.css">
+    <style>
+        .month-navigator { display: flex; justify-content: center; align-items: center; gap: 20px; margin-bottom: 30px; }
+        .month-navigator button { background-color: #6c757d; border: none; color: white; border-radius: 50%; width: 40px; height: 40px; font-size: 1.5em; cursor: pointer; }
+        .month-navigator h3 { margin: 0; font-size: 1.5em; color: #343a40; min-width: 250px; text-align: center; }
+    </style>
+</head>
+<body>
+    <button class="menu-toggle" id="menuToggle">☰</button>
+    <div class="dashboard-container">
+        <aside class="sidebar" id="sidebar">
+            <h2>Studio Je Marqui</h2>
+            <nav>
+                <ul>
+                    <li><a href="/dashboard.html">Dashboard</a></li>
+                    <li><a href="/clientes.html">Clientes</a></li>
+                    <li><a href="/agendamentos.html">Agendamentos</a></li>
+                    <li><a href="/livro-caixa.html" class="active">Livro Caixa</a></li>
+                    <li><a href="/relatorios.html">Relatórios</a></li>
+                    <li><a href="/profissionais.html">Gerenciar Profissionais</a></li>
+                    <li><a href="/gerenciar-usuarios.html">Gerenciar Usuários</a></li>
+                    <li style="margin-top: auto;"><a href="/api/auth/logout" style="color: #ffc107;">Sair</a></li>
+                </ul>
+            </nav>
+        </aside>
+    
+        <main class="main-content">
+            <header class="header"><h1>Livro Caixa</h1></header>
+
+            <div class="month-navigator">
+                <button id="prevMonthBtn">&lt;</button>
+                <h3 id="currentMonthDisplay"></h3>
+                <button id="nextMonthBtn">&gt;</button>
+            </div>
+    
+            <section class="summary-cards">
+                <div class="card"><h3>Receitas do Mês</h3><p id="totalReceitas" class="amount receitas">R$ 0,00</p></div>
+                <div class="card"><h3>Despesas do Mês</h3><p id="totalDespesas" class="amount despesas">R$ 0,00</p></div>
+                <div class="card"><h3>Saldo do Mês</h3><p id="saldoAtual" class="amount saldo">R$ 0,00</p></div>
+            </section>
+
+            <section class="transaction-form">
+                <h3>Adicionar Nova Transação</h3>
+                <form id="transacaoForm" class="form-row">
+                    <div class="form-group" style="flex: 1;"><label for="tipo">Tipo</label><select id="tipo" name="tipo" required><option value="Receita">Receita</option><option value="Despesa">Despesa</option></select></div>
+                    <div class="form-group" style="flex: 2;"><label for="descricao">Descrição</label><input type="text" id="descricao" name="descricao" required></div>
+                    <div class="form-group" style="flex: 1;"><label for="valor">Valor (R$)</label><input type="text" id="valor" name="valor" placeholder="0,00" required></div>
+                    <div class="form-group" style="flex: 1;"><label for="data">Data</label><input type="date" id="data" name="data" required></div>
+                    <div class="form-actions" style="flex-basis: 100%;"><button type="submit" class="btn-primary">Adicionar Transação</button></div>
+                </form>
+            </section>
+    
+            <section class="client-list-container">
+                <h2>Histórico de Transações do Mês</h2>
+                <div id="historyList" class="history-list"><p>Carregando histórico...</p></div>
+            </section>
+        </main>
+    </div>
+    
+    <script src="/js/main.js"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        let dataAtual = new Date();
+        let anoAtual = dataAtual.getFullYear();
+        let mesAtual = dataAtual.getMonth();
+
+        const prevMonthBtn = document.getElementById('prevMonthBtn');
+        const nextMonthBtn = document.getElementById('nextMonthBtn');
+        const currentMonthDisplay = document.getElementById('currentMonthDisplay');
+        const transacaoForm = document.getElementById('transacaoForm');
+        const historyListDiv = document.getElementById('historyList');
+        const dataInput = document.getElementById('data');
+        const totalReceitasEl = document.getElementById('totalReceitas');
+        const totalDespesasEl = document.getElementById('totalDespesas');
+        const saldoAtualEl = document.getElementById('saldoAtual');
+
+        const formatAsCurrency = (value) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+        const parseCurrency = (value) => parseFloat(String(value).replace(/\./g, '').replace(',', '.')) || 0;
+
+        function updateMonthDisplay() {
+            const data = new Date(anoAtual, mesAtual);
+            const nomeMes = data.toLocaleString('pt-BR', { month: 'long' });
+            currentMonthDisplay.textContent = `${nomeMes.charAt(0).toUpperCase() + nomeMes.slice(1)} de ${anoAtual}`;
+        }
+        
+        async function fetchAndRenderHistory() {
+            historyListDiv.innerHTML = '<p>Carregando histórico...</p>';
+            const url = `/api/transacoes?mes=${mesAtual + 1}&ano=${anoAtual}`;
+            try {
+                const response = await fetch(url);
+                const transacoes = await response.json();
+                historyListDiv.innerHTML = '';
+                if (transacoes.length === 0) {
+                    historyListDiv.innerHTML = `<p>Nenhuma transação encontrada para ${currentMonthDisplay.textContent}.</p>`;
+                    return;
+                }
+                transacoes.forEach(t => {
+                    const item = document.createElement('div');
+                    item.className = 'client-card';
+                    const valorClass = t.tipo === 'Receita' ? 'receita' : 'despesa';
+                    const valorSignal = t.tipo === 'Receita' ? '+' : '-';
+                    const dataFormatada = new Date(t.data).toLocaleDateString('pt-BR', {timeZone: 'UTC'});
+                    item.innerHTML = `<div style="flex-grow: 1;"><strong>${t.descricao}</strong><br><small>${dataFormatada}</small></div><strong class="${valorClass}" style="margin-right: 20px;">${valorSignal} ${formatAsCurrency(t.valor)}</strong><div class="action-icons"><span class="icon-delete" data-id="${t._id}" title="Excluir">🗑️</span></div>`;
+                    historyListDiv.appendChild(item);
+                });
+            } catch (error) {
+                historyListDiv.innerHTML = '<p style="color: red;">Erro ao carregar o histórico.</p>';
+            }
+        }
+        
+        async function fetchAndRenderSummary() {
+            const url = `/api/transacoes/summary?mes=${mesAtual + 1}&ano=${anoAtual}`;
+            try {
+                const response = await fetch(url);
+                const totais = await response.json();
+                const receitas = totais.totalReceitas || 0;
+                const despesas = totais.totalDespesas || 0;
+                const saldo = receitas - despesas;
+                totalReceitasEl.textContent = formatAsCurrency(receitas);
+                totalDespesasEl.textContent = formatAsCurrency(despesas);
+                saldoAtualEl.textContent = formatAsCurrency(saldo);
+            } catch (error) {
+                console.error("Erro ao buscar resumo:", error);
+            }
+        }
+        
+        // --- FUNÇÃO CORRIGIDA ---
+        async function updateAll() {
+            updateMonthDisplay();
+            await fetchAndRenderHistory(); // Primeiro, espera o histórico carregar
+            await fetchAndRenderSummary(); // Depois, busca o resumo atualizado
+        }
+
+        prevMonthBtn.addEventListener('click', () => { mesAtual--; if (mesAtual < 0) { mesAtual = 11; anoAtual--; } updateAll(); });
+        nextMonthBtn.addEventListener('click', () => { mesAtual++; if (mesAtual > 11) { mesAtual = 0; anoAtual++; } updateAll(); });
+
+        document.getElementById('valor').addEventListener('input', (e) => {
+            let value = e.target.value.replace(/\D/g, '');
+            e.target.value = value ? (value / 100).toFixed(2).replace('.', ',') : '';
+        });
+
+        transacaoForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const payload = { tipo: document.getElementById('tipo').value, descricao: document.getElementById('descricao').value, valor: parseCurrency(document.getElementById('valor').value), data: document.getElementById('data').value };
+            try {
+                const response = await fetch('/api/transacoes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                if (response.ok) {
+                    transacaoForm.reset();
+                    dataInput.valueAsDate = new Date();
+                    updateAll();
+                } else {
+                    const result = await response.json();
+                    alert(`Erro: ${result.message}`);
+                }
+            } catch (error) {
+                alert("Erro de conexão ao salvar a transação.");
+            }
+        });
+
+        historyListDiv.addEventListener('click', async (e) => {
+            if (e.target.classList.contains('icon-delete')) {
+                const transacaoId = e.target.dataset.id;
+                if (confirm('Tem certeza de que deseja excluir esta transação?')) {
+                    try {
+                        const response = await fetch(`/api/transacoes/${transacaoId}`, { method: 'DELETE' });
+                        const result = await response.json();
+                        alert(result.message);
+                        if (response.ok) updateAll();
+                    } catch(error) {
+                        alert('Erro de conexão ao excluir a transação.');
+                    }
+                }
+            }
+        });
+        
+        if (dataInput) dataInput.valueAsDate = new Date();
+        updateAll();
+    });
+    </script>
+</body>
+</html>

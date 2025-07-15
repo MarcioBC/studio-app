@@ -1,0 +1,62 @@
+/* public/css/livro-caixa.css */
+.summary-cards {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 30px;
+}
+.card {
+    flex: 1;
+    background-color: #ffffff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    text-align: center;
+}
+.card h3 {
+    margin-top: 0;
+    font-size: 1em;
+    color: #555;
+    text-transform: uppercase;
+}
+.card .amount {
+    font-size: 2em;
+    font-weight: bold;
+}
+.receitas { color: #2980b9; } /* Azul */
+.despesas { color: #c0392b; } /* Vermelho */
+.saldo { color: #27ae60; } /* Verde */
+
+.transaction-form {
+    background-color: #ffffff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    margin-bottom: 30px;
+}
+.transaction-form h3 {
+    margin-top: 0;
+}
+.history-list .client-card { /* Reutilizando a classe */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.history-list .receita { color: #2980b9; }
+.history-list .despesa { color: #c0392b; }
+
+@media (max-width: 768px) {
+    .summary-cards { flex-direction: column; }
+}
+/* Adicione esta regra ao final do seu livro-caixa.css */
+
+.transaction-form select,
+.transaction-form input {
+    height: 42px;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 16px;
+    box-sizing: border-box;
+    width: 100%;
+    font-family: inherit;
+}

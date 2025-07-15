@@ -1,0 +1,132 @@
+/* public/css/global.css */
+
+/* ... (Estilos anteriores 1 a 4 permanecem os mesmos) ... */
+
+/* 1. Reset básico e definição de fontes */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    background-color: #f4f7f9;
+    color: #333;
+    line-height: 1.6;
+}
+
+/* 2. Layout do Dashboard (Flexbox) */
+.dashboard-container {
+    display: flex;
+    min-height: 100vh;
+}
+
+/* 3. Estilo do Menu Lateral (Sidebar) */
+.sidebar {
+    width: 250px;
+    background-color: #2c3e50;
+    color: #ecf0f1;
+    padding: 20px;
+    box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+    transition: width 0.3s, transform 0.3s; /* Adicionado transform para transição suave */
+}
+
+.sidebar h2 {
+    color: #ffffff;
+    margin-bottom: 30px;
+    text-align: center;
+}
+
+.sidebar nav ul {
+    list-style: none;
+}
+
+.sidebar nav a {
+    display: block;
+    color: #bdc3c7;
+    text-decoration: none;
+    padding: 12px 15px;
+    margin-bottom: 8px;
+    border-radius: 5px;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+.sidebar nav a:hover,
+.sidebar nav a.active {
+    background-color: #34495e;
+    color: #ffffff;
+}
+
+/* 4. Estilo do Conteúdo Principal */
+.main-content {
+    flex-grow: 1;
+    padding: 30px;
+}
+
+.header {
+    background-color: #ffffff;
+    padding: 20px 30px;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    margin-bottom: 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.header h1 {
+    font-size: 24px;
+    color: #2c3e50;
+}
+
+/* 5. Responsividade (Ajustes para telas menores) */
+
+/* Estilo do botão de menu (hamburger) no mobile */
+.menu-toggle {
+    display: none; /* Oculto por padrão em telas grandes */
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #2c3e50;
+    position: fixed; /* Fixa o botão no topo da tela */
+    top: 20px;
+    left: 20px;
+    z-index: 1001; /* Garante que o botão fique acima de tudo */
+}
+
+@media (max-width: 768px) {
+    /* Mostra o botão de menu em telas pequenas */
+    .menu-toggle {
+        display: block; 
+    }
+
+    /* Oculta a barra lateral e a move para fora da tela */
+    .sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100%;
+        transform: translateX(-100%); /* Move para fora da tela */
+        z-index: 1000;
+        width: 250px;
+    }
+
+    /* Quando a barra lateral tem a classe 'active', ela aparece */
+    .sidebar.active {
+        transform: translateX(0); /* Move de volta para a tela */
+    }
+
+    /* O conteúdo principal ocupa toda a tela no mobile */
+    .main-content {
+        width: 100%;
+        padding-top: 60px; /* Espaço para o botão de menu */
+    }
+
+    .header {
+        padding: 20px;
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}

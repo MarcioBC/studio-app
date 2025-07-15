@@ -1,0 +1,59 @@
+/* public/css/gerenciar-usuarios.css */
+
+.user-form-container {
+    background-color: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 30px;
+    border: 1px solid #dee2e6;
+}
+
+.user-form-container h3 {
+    margin-top: 0;
+}
+
+.form-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    align-items: flex-end;
+}
+
+.form-row .form-group {
+    margin-bottom: 0;
+}
+
+/* --- MUDANÇA 1: GARANTE QUE TODOS OS INPUTS TENHAM A MESMA APARÊNCIA --- */
+.user-form-container input[type="text"],
+.user-form-container input[type="email"],
+.user-form-container input[type="password"] {
+    height: 42px; /* Define uma altura padrão para todos */
+    border: 1px solid #ccc; /* Garante a mesma borda para todos */
+    border-radius: 5px;
+    padding: 10px;
+    font-size: 16px;
+    box-sizing: border-box;
+    width: 100%;
+}
+/* -------------------------------------------------------------------------- */
+
+
+/* --- MUDANÇA 2: NOVAS PROPORÇÕES (NOME 3/7, EMAIL 3/7, SENHA 1/7) --- */
+/* Isso fará com que o campo de email tenha praticamente o dobro do da senha */
+.form-group-nome { flex: 3; }
+.form-group-email { flex: 3; }
+.form-group-senha { flex: 1.5; } /* Um pouco menos que 2/8 para dar espaço ao botão */
+/* ------------------------------------------------------------------- */
+
+
+.form-actions {
+    display: flex;
+    align-items: flex-end;
+    padding-bottom: 0; /* Ajuste fino de alinhamento */
+}
+
+/* Estilos do modal (inalterados) */
+.modal .form-group {
+    margin-bottom: 15px;
+}
+.modal .form-group .modal-input { /* Estilos específicos para inputs do modal */ }

@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Studio Je Marqui - Gerenciar Profissionais</title>
+    <link rel="stylesheet" href="/css/global.css">
+    <link rel="stylesheet" href="/css/clientes.css">
+</head>
+<body>
+    <button class="menu-toggle" id="menuToggle">☰</button>
+    <div class="dashboard-container">
+        <aside class="sidebar" id="sidebar">
+            <h2>Studio Je Marqui</h2>
+            <nav>
+                <ul>
+                    <li><a href="/dashboard.html" class="active">Dashboard</a></li>
+                    <li><a href="/clientes.html">Clientes</a></li>
+                    <li><a href="/agendamentos.html">Agendamentos</a></li>
+                    <li><a href="/profissionais.html">Gerenciar profissionais</a></li> 
+                    <li><a href="/livro-caixa.html">Livro Caixa</a></li>
+                    <li><a href="/relatorios.html">Relatórios</a></li>
+                    <li><a href="/gerenciar-usuarios.html">Gerenciar Usuários</a></li>
+                    <li style="margin-top: auto;"><a href="/api/auth/logout" style="color: #ffc107;">Sair</a></li> 
+    </ul>
+                    </ul>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <header class="header">
+                <h1>Gerenciar Profissionais</h1>
+            </header>
+
+            <section class="transaction-form" style="margin-bottom: 30px;">
+                <h3>Adicionar Novo Profissional</h3>
+                <form id="profissionalForm" class="form-row">
+                    <div class="form-group" style="flex-grow: 1;">
+                        <label for="nomeProfissional">Nome do Profissional</label>
+                        <input type="text" id="nomeProfissional" name="nome" required autocomplete="off">
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn-primary">Adicionar</button>
+                    </div>
+                </form>
+            </section>
+
+            <section class="client-list-container">
+                <h2>Profissionais Cadastrados</h2>
+                <div id="profissionaisList">
+                    <p>Carregando...</p>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="/js/main.js"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const profissionalForm = document.getElementById('profissionalForm');
+        const nomeInput = document.getElementById('nomeProfissional');
+        const profissionaisListDiv = document.getElementById('profissionaisList');
+
+        async function fetchAndRenderProfissionais() {
+            profissionaisListDiv.innerHTML = '<p>Carregando...</p>';
+            try {
+                const response = await fetch('/api/profissionais');
+                const profissionais = await response.json();
+                profissionaisListDiv.innerHTML = '';
+                if (profissionais.length === 0) {
+                    profissionaisListDiv.innerHTML = '<p>Nenhum profissional cadastrado.</p>';
+                    return;
+                }
+                profissionais.forEach(prof => {
+                    const item = document.createElement('div');
+                    item.className = 'client-card';
+                    item.innerHTML = `
+                        <span>${prof.nome}</span>
+                        <div class="action-icons">
+                            <span class="icon-delete" data-id="${prof._id}" title="Excluir">🗑️</span>
+                        </div>
+                    `;
+                    profissionaisListDiv.appendChild(item);
+                });
+            } catch (error) {
+                profissionaisListDiv.innerHTML = '<p style="color:red;">Erro ao carregar profissionais.</p>';
+            }
+        }
+
+        profissionalForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const nome = nomeInput.value.trim();
+            if (!nome) return;
+            try {
+                const response = await fetch('/api/profissionais', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nome })
+                });
+                const result = await response.json();
+                alert(result.message);
+                if (response.ok) {
+                    nomeInput.value = '';
+                    fetchAndRenderProfissionais();
+                }
+            } catch (error) {
+                alert('Erro de conexão ao adicionar profissional.');
+            }
+        });
+
+        profissionaisListDiv.addEventListener('click', async (e) => {
+            if (e.target.classList.contains('icon-delete')) {
+                const id = e.target.dataset.id;
+                if (confirm('Tem certeza que deseja excluir este profissional?')) {
+                    try {
+                        const response = await fetch(`/api/profissionais/${id}`, { method: 'DELETE' });
+                        const result = await response.json();
+                        alert(result.message);
+                        if (response.ok) {
+                            fetchAndRenderProfissionais();
+                        }
+                    } catch (error) {
+                        alert('Erro de conexão ao excluir.');
+                    }
+                }
+            }
+        });
+
+        fetchAndRenderProfissionais();
+    });
+    </script>
+</body>
+</html>

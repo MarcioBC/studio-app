@@ -1,0 +1,181 @@
+/* Container de filtros no topo da página */
+.filtros-container {
+    background-color: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.gerar-relatorio-container {
+    text-align: left;
+    margin-top: 20px;
+}
+
+/* Abas de Navegação */
+.tab-nav {
+    border-bottom: 2px solid #dee2e6;
+    margin-bottom: 20px;
+}
+.tab-button {
+    padding: 10px 20px;
+    border: none;
+    background-color: transparent;
+    cursor: pointer;
+    font-size: 1.1em;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+}
+.tab-button.active {
+    border-color: #007bff;
+    color: #007bff;
+    font-weight: bold;
+}
+
+/* Painéis das abas */
+.tab-pane {
+    display: none;
+}
+.tab-pane.active {
+    display: block;
+}
+
+/* Filtros dentro das abas */
+.status-filters button {
+    margin-right: 10px;
+}
+
+/* Tabela genérica de relatório (usada em Agendamentos) */
+.relatorio-tabela {
+    width: 100%;
+    border-collapse: collapse;
+}
+.relatorio-tabela th, .relatorio-tabela td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+}
+.relatorio-tabela thead {
+    background-color: #f2f2f2;
+}
+
+/*
+======================================================
+ESTILOS PARA O NOVO RELATÓRIO FINANCEIRO PROFISSIONAL
+======================================================
+*/
+
+/* Esconde elementos ao imprimir */
+@media print {
+    body * { visibility: hidden; }
+    .report-container, .report-container * { visibility: visible; }
+    .report-container {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        margin: 0;
+        padding: 0;
+        border: none;
+    }
+    .dashboard-container > .sidebar, 
+    .dashboard-container > .main-content > .header,
+    .filtros-container,
+    .tab-nav,
+    .report-filters, 
+    .report-actions {
+        display: none !important;
+    }
+}
+
+.hidden {
+    display: none;
+}
+.report-container {
+    background-color: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 25px;
+    margin-top: 20px;
+}
+.report-header {
+    text-align: center;
+    border-bottom: 2px solid #343a40;
+    padding-bottom: 15px;
+    margin-bottom: 25px;
+}
+.report-header h2 { margin: 0; font-size: 1.8em; }
+.report-header h3 { margin: 5px 0; font-size: 1.2em; color: #6c757d; }
+.report-header p { margin: 5px 0 0; font-size: 1em; color: #495057; }
+
+/* Cards de Resumo */
+.summary-cards {
+    display: flex;
+    gap: 20px;
+    justify-content: space-around;
+    margin-bottom: 25px;
+}
+.summary-cards .card {
+    flex: 1;
+    text-align: center;
+    padding: 20px;
+}
+.summary-cards .card h4 {
+    margin-top: 0;
+    font-size: 1em;
+    color: #495057;
+}
+.summary-cards .card p {
+    font-size: 1.6em;
+    font-weight: bold;
+}
+
+/* Filtros do Relatório Financeiro */
+.report-filters {
+    margin: 20px 0;
+    display: flex;
+    gap: 10px;
+}
+.btn-filter {
+    background-color: #e9ecef;
+    border: 1px solid #ced4da;
+    border-radius: 5px;
+    padding: 8px 15px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.btn-filter.active {
+    background-color: #343a40;
+    color: white;
+    border-color: #343a40;
+}
+
+/* Seções e Tabelas */
+.report-section {
+    margin-top: 30px;
+}
+.report-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+}
+.report-table th, .report-table td {
+    border: 1px solid #dee2e6;
+    padding: 12px;
+    text-align: left;
+}
+.report-table thead {
+    background-color: #f8f9fa;
+}
+.report-table tfoot {
+    font-size: 1.1em;
+    background-color: #f8f9fa;
+}
+.text-right {
+    text-align: right !important;
+}
+
+/* Ações */
+.report-actions {
+    text-align: center;
+    margin-top: 40px;
+}
