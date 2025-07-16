@@ -9,17 +9,13 @@ const jwt = require('jsonwebtoken');
 
 // ROTA DE REGISTRO SEGURA (VALIDA O PIN DA EMPRESA)
 router.post('/register', async (req, res) => {
-    // --- ADICIONADO PARA DEBUG ---
-    console.log("Recebendo requisição de registro. Body:", req.body);
+    // Agora pedimos o nome, email, senha e o PIN
     const { nome, email, senha, pinCadastro } = req.body;
-    console.log("PIN de Cadastro recebido:", pinCadastro);
-    // --- FIM DO DEBUG ---
 
     try {
         // 1. Encontra a empresa que possui o PIN fornecido
         const company = await Company.findOne({ pinCadastro: pinCadastro });
         if (!company) {
-            console.log("Empresa não encontrada para o PIN:", pinCadastro); // ADICIONADO PARA DEBUG
             return res.status(403).json({ message: 'PIN de Cadastro inválido ou não encontrado.' });
         }
 
