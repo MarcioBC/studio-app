@@ -15,20 +15,14 @@ router.get('/', async (req, res) => {
         if (mes && ano) {
             const mesNumero = parseInt(mes, 10);
             const anoNumero = parseInt(ano, 10);
-            
-            // Início do mês no fuso horário do servidor (geralmente UTC)
-            const dataInicio = new Date(Date.UTC(anoNumero, mesNumero - 1, 1)); 
-            
-            // Fim do mês no fuso horário do servidor (último dia do mês, 23:59:59.999 UTC)
-            const dataFim = new Date(Date.UTC(anoNumero, mesNumero, 0, 23, 59, 59, 999));
-            
+            const dataInicio = new Date(anoNumero, mesNumero - 1, 1);
+            const dataFim = new Date(anoNumero, mesNumero, 0, 23, 59, 59, 999);
             query.dataAgendamento = { $gte: dataInicio, $lte: dataFim };
         }
 
         const agendamentos = await Agendamento.find(query).populate('cliente', 'nome').sort({ dataAgendamento: 1 });
         res.status(200).json(agendamentos);
     } catch (error) {
-        console.error("Erro ao buscar agendamentos:", error); // Log mais detalhado
         res.status(500).json({ message: 'Erro ao buscar agendamentos.' });
     }
 });
@@ -36,50 +30,35 @@ router.get('/', async (req, res) => {
 // ROTA PARA O RESUMO DO DASHBOARD
 router.get('/summary/dashboard', async (req, res) => {
     try {
-        // Obter o início do dia de hoje e o início do dia de amanhã em UTC
-        const hojeUTC = new Date();
-        hojeUTC.setUTCHours(0, 0, 0, 0); // Define para 00:00:00 UTC
-        
-        const amanhaUTC = new Date(hojeUTC);
-        amanhaUTC.setUTCDate(hojeUTC.getUTCDate() + 1); // Avança um dia em UTC
-        
-        // Início da semana (domingo) em UTC do servidor
-        const inicioSemanaUTC = new Date(hojeUTC);
-        inicioSemanaUTC.setUTCDate(hojeUTC.getUTCDate() - hojeUTC.getUTCDay());
-        
-        // Fim da semana (sábado) em UTC do servidor
-        const fimSemanaUTC = new Date(inicioSemanaUTC);
-        fimSemanaUTC.setUTCDate(inicioSemanaUTC.getUTCDate() + 7);
-
+        const hoje = new Date();
+        hoje.setHours(0, 0, 0, 0);
+        const amanha = new Date(hoje);
+        amanha.setDate(hoje.getDate() + 1);
+        const inicioSemana = new Date(hoje);
+        inicioSemana.setDate(hoje.getDate() - hoje.getDay());
+        const fimSemana = new Date(inicioSemana);
+        fimSemana.setDate(inicioSemana.getDate() + 7);
 
         const [totalHoje, totalSemana, totalConfirmados, totalConcluidos] = await Promise.all([
-            Agendamento.countDocuments({ companyId: req.user.companyId, dataAgendamento: { $gte: hojeUTC, $lt: amanhaUTC } }),
-            Agendamento.countDocuments({ companyId: req.user.companyId, dataAgendamento: { $gte: inicioSemanaUTC, $lt: fimSemanaUTC } }),
+            Agendamento.countDocuments({ companyId: req.user.companyId, dataAgendamento: { $gte: hoje, $lt: amanha } }),
+            Agendamento.countDocuments({ companyId: req.user.companyId, dataAgendamento: { $gte: inicioSemana, $lt: fimSemana } }),
             Agendamento.countDocuments({ companyId: req.user.companyId, status: 'Confirmado' }),
             Agendamento.countDocuments({ companyId: req.user.companyId, status: 'Concluído' })
         ]);
         res.status(200).json({ hoje: totalHoje, semana: totalSemana, confirmados: totalConfirmados, concluidos: totalConcluidos });
-    } catch (error) { 
-        console.error("Erro no servidor ao buscar resumo:", error); // Log mais detalhado
-        res.status(500).json({ message: 'Erro no servidor ao buscar resumo.' }); 
-    }
+    } catch (error) { res.status(500).json({ message: 'Erro no servidor ao buscar resumo.' }); }
 });
 
 // ROTA PARA OS AGENDAMENTOS DE HOJE
 router.get('/hoje', async (req, res) => {
     try {
-        const hojeUTC = new Date();
-        hojeUTC.setUTCHours(0, 0, 0, 0); // Define para 00:00:00 UTC
-        
-        const amanhaUTC = new Date(hojeUTC);
-        amanhaUTC.setUTCDate(hojeUTC.getUTCDate() + 1); // Avança um dia em UTC
-
-        const agendamentosDeHoje = await Agendamento.find({ companyId: req.user.companyId, dataAgendamento: { $gte: hojeUTC, $lt: amanhaUTC } }).populate('cliente', 'nome').sort({ dataAgendamento: 1 });
+        const hoje = new Date();
+        hoje.setHours(0, 0, 0, 0);
+        const amanha = new Date(hoje);
+        amanha.setDate(hoje.getDate() + 1);
+        const agendamentosDeHoje = await Agendamento.find({ companyId: req.user.companyId, dataAgendamento: { $gte: hoje, $lt: amanha } }).populate('cliente', 'nome').sort({ dataAgendamento: 1 });
         res.status(200).json(agendamentosDeHoje);
-    } catch (error) { 
-        console.error("Erro no servidor ao buscar agendamentos de hoje:", error); // Log mais detalhado
-        res.status(500).json({ message: 'Erro no servidor ao buscar agendamentos de hoje.' }); 
-    }
+    } catch (error) { res.status(500).json({ message: 'Erro no servidor ao buscar agendamentos de hoje.' }); }
 });
 
 // ROTA PARA RELATÓRIOS
@@ -88,40 +67,23 @@ router.get('/relatorio', async (req, res) => {
         const { dataInicio, dataFim, status } = req.query;
         let query = { companyId: req.user.companyId };
         if (dataInicio && dataFim) {
-            // É crucial que dataInicio e dataFim venham do frontend em formato ISO (e.g., "YYYY-MM-DD")
-            // Para garantir que a interpretação seja correta em UTC.
-            const inicio = new Date(dataInicio); // Interpreta a string de data (assumindo YYYY-MM-DD)
-            inicio.setUTCHours(0, 0, 0, 0); // Garante 00:00:00 UTC para o dia de início
-
-            const fim = new Date(dataFim);
-            fim.setUTCHours(23, 59, 59, 999); // Garante 23:59:59.999 UTC para o dia de fim
-            
-            query.dataAgendamento = { $gte: inicio, $lte: fim };
+            query.dataAgendamento = { $gte: new Date(dataInicio), $lte: new Date(new Date(dataFim).setHours(23, 59, 59, 999)) };
         }
         if (status && status !== 'Todos') {
             query.status = status;
         }
         const agendamentos = await Agendamento.find(query).populate('cliente', 'nome').sort({ dataAgendamento: 1 });
         res.status(200).json(agendamentos);
-    } catch (error) { 
-        console.error("Erro no servidor ao gerar relatório:", error); // Log mais detalhado
-        res.status(500).json({ message: 'Erro no servidor ao gerar relatório.' }); 
-    }
+    } catch (error) { res.status(500).json({ message: 'Erro no servidor ao gerar relatório.' }); }
 });
 
 // ROTA POST: Cria um novo agendamento
 router.post('/', async (req, res) => {
     try {
-        // Se a data do agendamento é enviada do frontend como uma string ou number,
-        // o Mongoose (se o tipo no schema é Date) a converterá para um Date object e UTC.
-        // Se o frontend já envia um Date object ou string ISO, não precisa de conversão aqui.
         const novoAgendamento = new Agendamento({ ...req.body, companyId: req.user.companyId });
         await novoAgendamento.save();
         res.status(201).json({ message: 'Agendamento criado com sucesso!', data: novoAgendamento });
-    } catch (error) { 
-        console.error("Erro ao criar agendamento:", error); // Log mais detalhado
-        res.status(400).json({ message: 'Erro ao criar agendamento.'}); 
-    }
+    } catch (error) { res.status(400).json({ message: 'Erro ao criar agendamento.'}); }
 });
 
 // ROTA PUT: Atualiza um agendamento
@@ -130,10 +92,7 @@ router.put('/:id', async (req, res) => {
         const agendamento = await Agendamento.findOneAndUpdate({ _id: req.params.id, companyId: req.user.companyId }, req.body, { new: true, runValidators: true });
         if (!agendamento) return res.status(404).json({ message: 'Agendamento não encontrado.' });
         res.status(200).json({ message: 'Agendamento atualizado com sucesso!', data: agendamento });
-    } catch (error) { 
-        console.error("Erro ao atualizar agendamento:", error); // Log mais detalhado
-        res.status(400).json({ message: 'Erro ao atualizar agendamento.'}); 
-    }
+    } catch (error) { res.status(400).json({ message: 'Erro ao atualizar agendamento.'}); }
 });
 
 // ROTA DELETE: Exclui um agendamento
@@ -144,10 +103,7 @@ router.delete('/:id', async (req, res) => {
         if (agendamento.status === 'Concluído') return res.status(403).json({ message: 'Não é possível excluir um agendamento já concluído.' });
         await Agendamento.findByIdAndDelete(req.params.id);
         res.status(200).json({ message: 'Agendamento excluído com sucesso!' });
-    } catch (error) { 
-        console.error("Erro ao excluir agendamento:", error); // Log mais detalhado
-        res.status(500).json({ message: 'Erro ao excluir agendamento.' }); 
-    }
+    } catch (error) { res.status(500).json({ message: 'Erro ao excluir agendamento.' }); }
 });
 
 // ROTA PATCH: Atualiza o status
@@ -165,7 +121,7 @@ router.patch('/:id/status', async (req, res) => {
                     tipo: 'Receita',
                     descricao: `Serviços para ${agendamento.cliente.nome}: ${agendamento.procedimentos.map(p => p.nome).join(', ')}`,
                     valor: agendamento.valorTotal,
-                    data: agendamento.dataAgendamento, // Esta data já está em UTC, vinda do agendamento
+                    data: agendamento.dataAgendamento,
                     agendamentoId: agendamento._id,
                     companyId: req.user.companyId
                 });
@@ -173,10 +129,7 @@ router.patch('/:id/status', async (req, res) => {
             }
         }
         res.status(200).json({ message: `Status alterado para ${status}!`, data: agendamento });
-    } catch (error) { 
-        console.error("Erro ao atualizar status:", error); // Log mais detalhado
-        res.status(500).json({ message: 'Erro ao atualizar status.' }); 
-    }
+    } catch (error) { res.status(500).json({ message: 'Erro ao atualizar status.' }); }
 });
 
 module.exports = router;
