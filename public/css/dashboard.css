@@ -14,28 +14,29 @@
     box-shadow: 0 4px 8px rgba(0,0,0,0.07);
     text-align: center;
     border-left: 5px solid; /* Borda colorida para destaque */
-    /* Garante que o conteúdo não force uma largura mínima além do padding */
     box-sizing: border-box; 
-    /* Adicionei min-width para garantir que o card não fique muito estreito em algumas resoluções */
-    min-width: 180px; /* Ajuste conforme necessário para o conteúdo não quebrar */
+    
+    /* --- AJUSTE AQUI --- */
+    /* Aumente o min-width do card para dar mais espaço para o texto da h3 */
+    min-width: 200px; /* Era 180px, aumentei para 200px. Você pode precisar de mais, ex: 220px, 240px */
+    /* Se o texto for muito longo para 4 colunas, considere reduzir para 3 colunas em telas maiores, ou diminuir um pouco o gap */
+    /* Você pode ajustar o gap na classe .dashboard-cards, se necessário */
 }
 
 .dashboard-card h3 {
     margin-top: 0;
-    /* Ajuste o tamanho da fonte para que seja consistente e caiba melhor. 1.1em ou 1.2em pode ser melhor */
-    font-size: 1.1em; /* Era 1em, aumentei ligeiramente para testar */
+    /* --- VOLTANDO AO ORIGINAL E MANTENDO A QUEBRA --- */
+    font-size: 1em; /* Voltando para o tamanho original */
     color: #6c757d;
     text-transform: uppercase;
     
-    /* --- ADIÇÕES PARA EVITAR QUEBRA DE LINHA E GERENCIAR EXCESSO DE TEXTO --- */
-    white-space: nowrap; /* Impede que o texto quebre para a próxima linha */
-    overflow: hidden; /* Oculta qualquer texto que exceda a largura do contêiner */
-    text-overflow: ellipsis; /* Adiciona "..." se o texto for muito longo */
-    /* --- FIM DAS ADIÇÕES --- */
+    /* --- MANTER white-space: nowrap; PARA A FRASE FICAR EM UMA LINHA --- */
+    white-space: nowrap; /* IMPEDE A QUEBRA DE LINHA */
+    /* Removemos overflow: hidden; e text-overflow: ellipsis; para não cortar a frase com "..." */
 }
 
 .dashboard-card .count {
-    font-size: 1.0em;
+    font-size: 2.5em;
     font-weight: 700;
     margin: 10px 0;
 }
@@ -51,14 +52,16 @@
     .dashboard-cards {
         grid-template-columns: repeat(2, 1fr); /* 2 colunas em telas médias */
     }
+    /* Se o texto ainda quebrar em 2 colunas, aumente o min-width do .dashboard-card aqui também */
 }
 @media (max-width: 576px) {
     .dashboard-cards {
         grid-template-columns: 1fr; /* 1 coluna em telas pequenas */
     }
+    /* Aumente o min-width do .dashboard-card aqui se necessário */
 }
 
-/* --- Agendas do Dia --- */
+/* --- Agendas do Dia --- (Mantido igual à versão anterior para consistência) */
 .agenda-do-dia {
     margin-top: 30px;
 }
@@ -77,13 +80,13 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    flex-wrap: wrap; /* Permite que os itens quebrem linha em telas menores */
-    gap: 10px; /* Espaçamento entre os itens */
+    flex-wrap: wrap;
+    gap: 10px;
 }
 
 .agenda-item-details {
-    flex: 1; /* Ocupa o espaço disponível */
-    min-width: 200px; /* Garante que não fique muito estreito */
+    flex: 1;
+    min-width: 200px;
 }
 
 .agenda-item-details strong {
@@ -92,7 +95,7 @@
 }
 
 .agenda-item-details small {
-    display: block; /* Garante que "Procedimentos" e "Profissional" fiquem em nova linha */
+    display: block;
     color: #6c757d;
     margin-top: 5px;
 }
@@ -100,10 +103,9 @@
 .agenda-item .valor {
     font-size: 1.2em;
     font-weight: 700;
-    color: #28a745; /* Cor verde para valores */
+    color: #28a745;
 }
 
-/* Botão de Concluir */
 .btn-concluir {
     background-color: #007bff;
     color: white;
