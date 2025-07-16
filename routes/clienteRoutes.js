@@ -51,5 +51,30 @@ router.post('/register', async (req, res) => {
 });
 
 // Adicione aqui as futuras rotas de Editar e Excluir Clientes...
+// Rota DELETE /:id: Exclui um cliente da empresa logada
+router.delete('/:id', async (req, res) => {
+    try {
+        // Verifica se o usuário está autenticado e tem companyId
+        if (!req.user || !req.user.companyId) {
+            return res.status(401).json({ message: 'Usuário não autenticado ou sem ID de empresa.' });
+        }
+
+        const { id } = req.params; // ID do cliente a ser excluído
+
+        // Encontra e deleta o cliente APENAS se ele pertence à companyId do usuário logado
+        const cliente = await Cliente.findOneAndDelete({ _id: id, companyId: req.user.companyId });
+
+        if (!cliente) {
+            // Se não encontrar, pode ser 404 (não existe) ou 403 (existe, mas não pertence ao usuário)
+            return res.status(404).json({ message: 'Cliente não encontrado ou não pertence à sua empresa.' });
+        }
+
+        res.status(200).json({ message: 'Cliente excluído com sucesso!' });
+
+    } catch (error) {
+        console.error("Erro ao excluir cliente:", error);
+        res.status(500).json({ message: 'Erro interno do servidor ao excluir cliente.' });
+    }
+});
 
 module.exports = router;
