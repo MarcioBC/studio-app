@@ -4,15 +4,42 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cookieParser = require('cookie-parser');
 const path = require('path');
-require('dotenv').config(); 
+require('dotenv').config();
+const cors = require('cors'); // <--- ADICIONADO: Importa o módulo 'cors'
 
 const app = express();
 
-// Middlewares
+// --- ADICIONADO: Configuração do CORS ---
+// Define as origens permitidas (a URL do seu próprio aplicativo no Render)
+// É crucial que esta URL seja a URL EXATA do seu aplicativo no Render.
+// Se você mudou o nome do seu serviço, use a nova URL aqui.
+const allowedOrigins = ['https://studio-app-j198.onrender.com']; 
+// Se você está testando localmente e o frontend está em uma porta diferente, adicione-a aqui também:
+// allowedOrigins.push('http://localhost:3000'); // Exemplo se seu frontend roda localmente na porta 3000
+
+app.use(cors({
+    origin: function(origin, callback){
+        // Permite requisições sem 'origin' (como requisições diretas de ferramentas como Postman, ou arquivos locais)
+        // ou se a origem da requisição está na lista de origens permitidas.
+        if (!origin || allowedOrigins.includes(origin)){
+            callback(null, true); // Permite a requisição
+        } else {
+            callback(new Error('Not allowed by CORS')); // Bloqueia a requisição
+        }
+    },
+    credentials: true // Permite que o navegador envie e receba cookies (importante para sua autenticação JWT via cookie)
+}));
+// --- FIM DA ADIÇÃO DO CORS ---
+
+
+// Middlewares built-in do Express
+app.use(express.json()); // Para fazer o parsing de requisições JSON
+app.use(express.urlencoded({ extended: true })); // Para fazer o parsing de requisições URL-encoded
+app.use(cookieParser()); // Para fazer o parsing de cookies
+
+// Servir arquivos estáticos (colocado aqui após os middlewares básicos para garantir que o CORS se aplique)
 app.use(express.static('public')); 
-app.use(express.urlencoded({ extended: true }));
-app.use(express.json());
-app.use(cookieParser());
+
 
 // Conexão com o MongoDB
 mongoose.connect(process.env.MONGODB_URI)
@@ -32,16 +59,16 @@ const userRoutes = require('./routes/userRoutes');
 
 // --- ROTAS PÚBLICAS (NÃO PRECISAM DE LOGIN) ---
 app.use('/api/auth', authRoutes); // Login, Logout, Registro
-app.use('/api/companies', companyRoutes); // Registro de novas empresas
+app.use('/api/companies', companyRoutes); // Registro de novas empresas (se a criação de empresa não exige login)
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
-console.log("Requisição recebida na rota raiz!");
+// console.log("Requisição recebida na rota raiz!"); // Removi este console.log pois ele era executado apenas uma vez na inicialização
 app.get('/register.html', (req, res) => res.sendFile(path.join(__dirname, 'public', 'register.html')));
 app.get('/register-company.html', (req, res) => res.sendFile(path.join(__dirname, 'public', 'register-company.html')));
 // Futuramente, a página de registro de empresa ficará aqui
 
-// --- APLICAÇÃO DO PORTEIRO ---
+// --- APLICAÇÃO DO PORTEIRO (Middleware de Autenticação) ---
 // Tudo o que for definido ABAIXO desta linha, exigirá login.
-app.use(protect);
+app.use(protect); // protect é o middleware que verifica o token e popula req.user
 
 // --- ROTAS PROTEGIDAS (PRECISAM DE LOGIN E FILTRAM POR COMPANYID) ---
 app.use('/api/clientes', clienteRoutes); 
@@ -50,7 +77,7 @@ app.use('/api/transacoes', transacaoRoutes);
 app.use('/api/profissionais', profissionalRoutes);
 app.use('/api/users', userRoutes);
 
-// Servir as páginas HTML protegidas
+// Servir as páginas HTML protegidas (estas rotas HTML também serão protegidas por 'protect')
 app.get('/dashboard.html', (req, res) => res.sendFile(path.join(__dirname, 'public', 'dashboard.html')));
 app.get('/clientes.html', (req, res) => res.sendFile(path.join(__dirname, 'public', 'clientes.html')));
 app.get('/agendamentos.html', (req, res) => res.sendFile(path.join(__dirname, 'public', 'agendamentos.html')));
@@ -59,10 +86,23 @@ app.get('/relatorios.html', (req, res) => res.sendFile(path.join(__dirname, 'pub
 app.get('/profissionais.html', (req, res) => res.sendFile(path.join(__dirname, 'public', 'profissionais.html')));
 app.get('/gerenciar-usuarios.html', (req, res) => res.sendFile(path.join(__dirname, 'public', 'gerenciar-usuarios.html')));
 
+
+// --- Manipulação de Erros (sempre no final) ---
+// Captura de erros 404 (para rotas não encontradas)
+app.use((req, res, next) => {
+    res.status(404).send("Desculpe, não conseguimos encontrar isso!");
+});
+
+// Manipulador de erros genérico (para erros internos do servidor)
+app.use((err, req, res, next) => {
+    console.error(err.stack); // Registra o stack trace do erro no console do servidor
+    res.status(500).send('Algo deu errado no servidor!'); // Envia uma resposta de erro genérica
+});
+
+
 // Iniciar o servidor
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3000; // Usa a porta do ambiente (Render) ou 3000 como padrão
 app.listen(PORT, () => {
     console.log(`Servidor a correr em http://localhost:${PORT}`);
-    console.log(`Servidor a correr na porta ${PORT}`);
-    console.log("Aplicativo pronto para receber requisições!"); // Adicione esta linha
+    console.log("Aplicativo pronto para receber requisições!"); 
 });
