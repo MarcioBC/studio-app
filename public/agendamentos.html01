@@ -183,20 +183,9 @@
             clientSearchInput.disabled = true;
             selectedClientIdInput.value = ag.cliente._id;
             selectedClientNameSpan.textContent = ag.cliente.nome;
-            
-            // --- INÍCIO DA MUDANÇA PARA EDIÇÃO DE DATA/HORA ---
-            const dataAgendamentoObj = new Date(ag.dataAgendamento); // Data em UTC do DB
-            // Ajusta para o fuso horário local ao exibir no input date/time
-            const ano = dataAgendamentoObj.getFullYear();
-            const mes = (dataAgendamentoObj.getMonth() + 1).toString().padStart(2, '0');
-            const dia = dataAgendamentoObj.getDate().toString().padStart(2, '0');
-            document.getElementById('dataAgendamento').value = `${ano}-${mes}-${dia}`;
-            
-            const horas = dataAgendamentoObj.getHours().toString().padStart(2, '0');
-            const minutos = dataAgendamentoObj.getMinutes().toString().padStart(2, '0');
-            document.getElementById('horaAgendamento').value = `${horas}:${minutos}`;
-            // --- FIM DA MUDANÇA PARA EDIÇÃO DE DATA/HORA ---
-
+            const data = new Date(ag.dataAgendamento);
+            document.getElementById('dataAgendamento').value = data.toISOString().split('T')[0];
+            document.getElementById('horaAgendamento').value = data.toTimeString().split(' ')[0].substring(0, 5);
             document.getElementById('profissional').value = ag.profissional;
             document.getElementById('sala').value = ag.sala;
             document.getElementById('observacoes').value = ag.observacoes || '';
@@ -249,14 +238,8 @@
                 agendamentos.forEach(ag => {
                     const card = document.createElement('div');
                     card.className = 'client-card';
-                    
-                    // --- INÍCIO DA MUDANÇA PARA EXIBIÇÃO DE DATA/HORA ---
-                    const dataAgendamentoObj = new Date(ag.dataAgendamento); // Objeto Date em UTC
-                    // Exibe no fuso horário local do usuário, sem forçar UTC
-                    const dataFormatada = dataAgendamentoObj.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-                    const horaFormatada = dataAgendamentoObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-                    // --- FIM DA MUDANÇA PARA EXIBIÇÃO DE DATA/HORA ---
-
+                    const dataFormatada = new Date(ag.dataAgendamento).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' });
+                    const horaFormatada = new Date(ag.dataAgendamento).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' });
                     const nomesProcedimentos = ag.procedimentos.map(p => p.nome).join(', ');
                     const statusClass = `status-${(ag.status || 'pendente').toLowerCase().replace('ú', 'u')}`;
                     card.innerHTML = `<div style="flex: 1;"><strong>${dataFormatada} às ${horaFormatada}</strong> - ${ag.cliente ? ag.cliente.nome : 'Cliente Removido'}<br><small><b>Procedimentos:</b> ${nomesProcedimentos}</small><br><small><b>Profissional:</b> ${ag.profissional} - <b>Sala:</b> ${ag.sala}</small></div><div style="text-align: right;"><span class="status ${statusClass}" data-id="${ag._id}" data-status="${ag.status}">${ag.status}</span><p style="margin:10px 0 0 0; font-weight: bold;">${formatAsCurrency(ag.valorTotal)}</p><div class="action-icons" style="margin-top: 10px;"><span class="icon-edit" data-id="${ag._id}" title="Editar">✏️</span><span class="icon-delete" data-id="${ag._id}" title="Excluir">🗑️</span></div></div>`;
@@ -264,7 +247,6 @@
                 });
             } catch (error) {
                 agendamentoListDiv.innerHTML = '<p style="color: red;">Erro ao carregar os agendamentos.</p>';
-                console.error("Erro ao carregar os agendamentos no frontend:", error); // Adicionei log
             }
         }
         
@@ -314,18 +296,9 @@
         agendamentoForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const editingId = agendamentoForm.dataset.editingId;
-            // Pegue os valores dos inputs de data e hora
-            const dataInput = document.getElementById('dataAgendamento').value; // Ex: "2025-07-15"
-            const horaInput = document.getElementById('horaAgendamento').value; // Ex: "20:00"
-
-            // Divida e converta para números
-            const [ano, mes, dia] = dataInput.split('-').map(Number);
-            const [horas, minutos] = horaInput.split(':').map(Number);
-
             const payload = {
                 cliente: selectedClientIdInput.value,
-                // Cria a data em UTC com base nos valores selecionados localmente
-                dataAgendamento: new Date(Date.UTC(ano, mes - 1, dia, horas, minutos)),
+                dataAgendamento: new Date(`${document.getElementById('dataAgendamento').value}T${document.getElementById('horaAgendamento').value}`),
                 procedimentos: [...agendamentoForm.querySelectorAll('.procedimento-row')].map(row => ({ nome: row.querySelector('[name=procedimento_nome]').value, valor: parseCurrency(row.querySelector('[name=procedimento_valor]').value) })),
                 profissional: document.getElementById('profissional').value,
                 sala: document.getElementById('sala').value,
@@ -346,7 +319,6 @@
                 }
             } catch (error) {
                 alert('Erro de conexão ao salvar.');
-                console.error("Erro de conexão ao salvar agendamento no frontend:", error); // Adicionei log
             }
         });
 
