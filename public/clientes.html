@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Studio Je Marqui - Clientes</title>
+    <title><span id="pageTitleCompanyName">Studio Je Marqui</span> - Clientes</title>
     <link rel="stylesheet" href="/css/global.css">
     <link rel="stylesheet" href="/css/clientes.css">
 </head>
@@ -12,11 +12,11 @@
 
     <div class="dashboard-container">
         <aside class="sidebar" id="sidebar">
-            <h2>Studio Je Marqui</h2>
+            <h2 id="sidebarCompanyName">Studio Je Marqui</h2>
             <nav>
                 <ul>
-                    <li><a href="/dashboard.html" class="active">Dashboard</a></li>
-                    <li><a href="/clientes.html">Clientes</a></li>
+                    <li><a href="/dashboard.html">Dashboard</a></li>
+                    <li><a href="/clientes.html" class="active">Clientes</a></li>
                     <li><a href="/agendamentos.html">Agendamentos</a></li>
                     <li><a href="/livro-caixa.html">Livro Caixa</a></li>
                     <li><a href="/relatorios.html">Relatórios</a></li>
@@ -130,7 +130,33 @@
         </div>
     </div>
 
+    <script src="/js/main.js"></script>
     <script>
+        // --- INÍCIO DA MUDANÇA: Lógica para carregar o nome da empresa ---
+        document.addEventListener('DOMContentLoaded', () => {
+            const companyName = localStorage.getItem('companyName');
+            
+            // Elementos HTML para atualizar
+            const pageTitleSpan = document.getElementById('pageTitleCompanyName');
+            const sidebarCompanyNameElement = document.getElementById('sidebarCompanyName');
+
+            if (companyName) {
+                // Atualiza o título da página (dentro da tag <title>)
+                if (pageTitleSpan) {
+                    pageTitleSpan.textContent = companyName;
+                }
+                // Atualiza o nome na barra lateral
+                if (sidebarCompanyNameElement) {
+                    sidebarCompanyNameElement.textContent = companyName;
+                }
+            } else {
+                // Opcional: Redirecionar para o login se o nome da empresa não for encontrado (sessão expirada, etc.)
+                // console.warn('Nome da empresa não encontrado no localStorage. Redirecionando para login.');
+                // window.location.href = '/index.html'; 
+            }
+        // --- FIM DA MUDANÇA ---
+
+
         // --- Variáveis Globais e Referências de UI ---
         let clientsData = [];
         const menuToggle = document.getElementById('menuToggle');
@@ -367,7 +393,7 @@
                 document.getElementById('numero').value = clienteParaEditar.numero || '';
                 document.getElementById('complemento').value = clienteParaEditar.complemento || '';
                 document.getElementById('bairro').value = clienteParaEditar.bairro || '';
-                document.getElementById('cidade').value = clienteParaEditar.cidade || '';
+                document.getElementById('cidade').value = clienteParaEditar.localidade || ''; // Corrigido para data.localidade
                 document.getElementById('estado').value = clienteParaEditar.estado || '';
                 // -----------------------------------------------------------
 
@@ -393,7 +419,11 @@
             } catch (error) { console.error('Erro ao buscar CEP:', error); }
         });
         
-        document.addEventListener('DOMContentLoaded', fetchAndRenderClients);
+        // MUDANÇA AQUI: Movendo o fetchAndRenderClients para dentro do DOMContentLoaded
+        document.addEventListener('DOMContentLoaded', () => {
+             // A lógica do companyName já está aqui em cima, no início do script
+             fetchAndRenderClients(); // Chama a função para carregar clientes após o DOM carregar
+        });
     </script>
 </body>
 </html>

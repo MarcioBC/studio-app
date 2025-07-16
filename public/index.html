@@ -23,8 +23,8 @@
         </form>
         <div id="statusMessage" style="margin-top: 15px;"></div>
         <div class="auth-link">
-    <p>É sua primeira vez aqui? <a href="/register.html">Crie sua conta de usuário</a></p>
-</div>
+            <p>É sua primeira vez aqui? <a href="/register.html">Crie sua conta de usuário</a></p>
+        </div>
     </div>
 
     <script>
@@ -52,8 +52,15 @@
                 if (response.ok) {
                     statusMessage.textContent = 'Login bem-sucedido! A entrar no sistema...';
                     statusMessage.style.color = 'green';
-                    // Redireciona para o dashboard após o login
-                    window.location.href = '/dashboard.html';
+                    
+                    // --- MUDANÇA AQUI: SALVANDO companyName NO localStorage ---
+                    localStorage.setItem('token', result.token);
+                    localStorage.setItem('userRole', result.user.role);
+                    localStorage.setItem('companyId', result.user.companyId);
+                    localStorage.setItem('companyName', result.user.companyName); // <-- LINHA ADICIONADA/MODIFICADA
+                    // --- FIM DA MUDANÇA ---
+
+                    window.location.href = '/dashboard.html'; // Redireciona para o dashboard
                 } else {
                     statusMessage.textContent = `Erro: ${result.message}`;
                     statusMessage.style.color = 'red';

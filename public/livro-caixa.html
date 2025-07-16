@@ -3,13 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Studio Je Marqui - Livro Caixa</title>
+    <title><span id="pageTitleCompanyName">Studio Je Marqui</span> - Livro Caixa</title>
     <link rel="stylesheet" href="/css/global.css">
     <link rel="stylesheet" href="/css/clientes.css">
     <link rel="stylesheet" href="/css/livro-caixa.css">
     <style>
         .month-navigator { display: flex; justify-content: center; align-items: center; gap: 20px; margin-bottom: 30px; }
         .month-navigator button { background-color: #6c757d; border: none; color: white; border-radius: 50%; width: 40px; height: 40px; font-size: 1.5em; cursor: pointer; }
+        .month-navigator button:hover { background-color: #5a6268; }
         .month-navigator h3 { margin: 0; font-size: 1.5em; color: #343a40; min-width: 250px; text-align: center; }
     </style>
 </head>
@@ -17,7 +18,7 @@
     <button class="menu-toggle" id="menuToggle">☰</button>
     <div class="dashboard-container">
         <aside class="sidebar" id="sidebar">
-            <h2>Studio Je Marqui</h2>
+            <h2 id="sidebarCompanyName">Studio Je Marqui</h2>
             <nav>
                 <ul>
                     <li><a href="/dashboard.html">Dashboard</a></li>
@@ -68,6 +69,26 @@
     <script src="/js/main.js"></script>
     <script>
     document.addEventListener('DOMContentLoaded', () => {
+        // --- INÍCIO DA MUDANÇA: Lógica para carregar o nome da empresa ---
+        const companyName = localStorage.getItem('companyName');
+        // Elementos HTML para atualizar
+        const pageTitleSpan = document.getElementById('pageTitleCompanyName');
+        const sidebarCompanyNameElement = document.getElementById('sidebarCompanyName');
+
+        if (companyName) {
+            if (pageTitleSpan) {
+                pageTitleSpan.textContent = companyName;
+            }
+            if (sidebarCompanyNameElement) {
+                sidebarCompanyNameElement.textContent = companyName;
+            }
+        } else {
+            // Opcional: Redirecionar para o login se o nome da empresa não for encontrado
+            // console.warn('Nome da empresa não encontrado no localStorage. Redirecionando para login.');
+            // window.location.href = '/index.html'; 
+        }
+        // --- FIM DA MUDANÇA ---
+
         let dataAtual = new Date();
         let anoAtual = dataAtual.getFullYear();
         let mesAtual = dataAtual.getMonth();
@@ -107,12 +128,14 @@
                     item.className = 'client-card';
                     const valorClass = t.tipo === 'Receita' ? 'receita' : 'despesa';
                     const valorSignal = t.tipo === 'Receita' ? '+' : '-';
-                    const dataFormatada = new Date(t.data).toLocaleDateString('pt-BR', {timeZone: 'UTC'});
+                    // MUDANÇA AQUI: Formatação da data no fuso horário local
+                    const dataFormatada = new Date(t.data).toLocaleDateString('pt-BR'); 
                     item.innerHTML = `<div style="flex-grow: 1;"><strong>${t.descricao}</strong><br><small>${dataFormatada}</small></div><strong class="${valorClass}" style="margin-right: 20px;">${valorSignal} ${formatAsCurrency(t.valor)}</strong><div class="action-icons"><span class="icon-delete" data-id="${t._id}" title="Excluir">🗑️</span></div>`;
                     historyListDiv.appendChild(item);
                 });
             } catch (error) {
                 historyListDiv.innerHTML = '<p style="color: red;">Erro ao carregar o histórico.</p>';
+                console.error("Erro ao carregar o histórico no frontend:", error); // Adicionei log
             }
         }
         
@@ -132,7 +155,6 @@
             }
         }
         
-        // --- FUNÇÃO CORRIGIDA ---
         async function updateAll() {
             updateMonthDisplay();
             await fetchAndRenderHistory(); // Primeiro, espera o histórico carregar
@@ -149,12 +171,23 @@
 
         transacaoForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const payload = { tipo: document.getElementById('tipo').value, descricao: document.getElementById('descricao').value, valor: parseCurrency(document.getElementById('valor').value), data: document.getElementById('data').value };
+            // MUDANÇA AQUI: Criando a data para o backend (ajuste de fuso horário)
+            const dataInput = document.getElementById('data').value; // Ex: "2025-07-15"
+            // Cria a data no fuso horário local para envio ao backend
+            const dataParaSalvar = new Date(dataInput + 'T00:00:00'); // Define a hora para 00:00 local para evitar salto de dia
+            
+            const payload = { 
+                tipo: document.getElementById('tipo').value, 
+                descricao: document.getElementById('descricao').value, 
+                valor: parseCurrency(document.getElementById('valor').value), 
+                data: dataParaSalvar // Usa a data ajustada
+            };
+
             try {
                 const response = await fetch('/api/transacoes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
                 if (response.ok) {
                     transacaoForm.reset();
-                    dataInput.valueAsDate = new Date();
+                    dataInput.valueAsDate = new Date(); // Reset do input para a data de hoje local
                     updateAll();
                 } else {
                     const result = await response.json();
@@ -162,6 +195,7 @@
                 }
             } catch (error) {
                 alert("Erro de conexão ao salvar a transação.");
+                console.error("Erro de conexão ao salvar transação no frontend:", error); // Adicionei log
             }
         });
 
@@ -176,12 +210,21 @@
                         if (response.ok) updateAll();
                     } catch(error) {
                         alert('Erro de conexão ao excluir a transação.');
+                        console.error("Erro de conexão ao excluir transação no frontend:", error); // Adicionei log
                     }
                 }
             }
         });
         
-        if (dataInput) dataInput.valueAsDate = new Date();
+        // Garante que o input de data comece com a data de hoje
+        if (dataInput) {
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = (today.getMonth() + 1).toString().padStart(2, '0');
+            const day = today.getDate().toString().padStart(2, '0');
+            dataInput.value = `${year}-${month}-${day}`;
+        }
+        
         updateAll();
     });
     </script>
