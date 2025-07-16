@@ -52,6 +52,14 @@
                 if (response.ok) {
                     statusMessage.textContent = 'Login bem-sucedido! A entrar no sistema...';
                     statusMessage.style.color = 'green';
+                    
+                    // --- MUDANÇA AQUI: SALVANDO companyName NO localStorage ---
+                    localStorage.setItem('token', result.token);
+                    localStorage.setItem('userRole', result.user.role);
+                    localStorage.setItem('companyId', result.user.companyId);
+                    localStorage.setItem('companyName', result.user.companyName); // <-- LINHA ADICIONADA/MODIFICADA
+                    // --- FIM DA MUDANÇA ---
+
                     // Redireciona para o dashboard após o login
                     window.location.href = '/dashboard.html';
                 } else {
