@@ -9,30 +9,18 @@ const cors = require('cors'); // <--- ADICIONADO: Importa o módulo 'cors'
 
 const app = express();
 
-// --- ADICIONADO: Configuração do CORS ---
-// Define as origens permitidas (a URL do seu próprio aplicativo no Render)
-// É crucial que esta URL seja a URL EXATA do seu aplicativo no Render.
-// Se você mudou o nome do seu serviço, use a nova URL aqui.
-const allowedOrigins = ['https://studio-app-j198.onrender.com']; 
-// Se você está testando localmente e o frontend está em uma porta diferente, adicione-a aqui também:
-// allowedOrigins.push('http://localhost:3000'); // Exemplo se seu frontend roda localmente na porta 3000
-
+// --- CRÍTICO: CONFIGURAÇÃO DO CORS DEVE SER UMA DAS PRIMEIRAS COISAS ---
+// PARA DEPURACAO, VAMOS USAR TEMPORARIAMENTE 'origin: *'
+// ISSO ABRE O CORS PARA QUALQUER ORIGEM E DEVE ELIMINAR O PROBLEMA DE CORS.
+// NUNCA DEIXE ISSO EM PRODUÇÃO FINAL.
 app.use(cors({
-    origin: function(origin, callback){
-        // Permite requisições sem 'origin' (como requisições diretas de ferramentas como Postman, ou arquivos locais)
-        // ou se a origem da requisição está na lista de origens permitidas.
-        if (!origin || allowedOrigins.includes(origin)){
-            callback(null, true); // Permite a requisição
-        } else {
-            callback(new Error('Not allowed by CORS')); // Bloqueia a requisição
-        }
-    },
+    origin: '*', // <--- ALTERADO TEMPORARIAMENTE PARA PERMITIR QUALQUER ORIGEM
     credentials: true // Permite que o navegador envie e receba cookies (importante para sua autenticação JWT via cookie)
 }));
 // --- FIM DA ADIÇÃO DO CORS ---
 
 
-// Middlewares built-in do Express
+// Middlewares built-in do Express (depois do CORS)
 app.use(express.json()); // Para fazer o parsing de requisições JSON
 app.use(express.urlencoded({ extended: true })); // Para fazer o parsing de requisições URL-encoded
 app.use(cookieParser()); // Para fazer o parsing de cookies
@@ -61,10 +49,8 @@ const userRoutes = require('./routes/userRoutes');
 app.use('/api/auth', authRoutes); // Login, Logout, Registro
 app.use('/api/companies', companyRoutes); // Registro de novas empresas (se a criação de empresa não exige login)
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
-// console.log("Requisição recebida na rota raiz!"); // Removi este console.log pois ele era executado apenas uma vez na inicialização
 app.get('/register.html', (req, res) => res.sendFile(path.join(__dirname, 'public', 'register.html')));
 app.get('/register-company.html', (req, res) => res.sendFile(path.join(__dirname, 'public', 'register-company.html')));
-// Futuramente, a página de registro de empresa ficará aqui
 
 // --- APLICAÇÃO DO PORTEIRO (Middleware de Autenticação) ---
 // Tudo o que for definido ABAIXO desta linha, exigirá login.
