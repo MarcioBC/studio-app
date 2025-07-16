@@ -252,10 +252,9 @@
                     
                     // --- INÍCIO DA MUDANÇA PARA EXIBIÇÃO DE DATA/HORA ---
                     const dataAgendamentoObj = new Date(ag.dataAgendamento); // Objeto Date em UTC
-                    // Exibe a DATA no fuso horário local do usuário, sem forçar UTC
-                    const dataFormatada = dataAgendamentoObj.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }); 
-                    // Exibe a HORA no fuso horário LOCAL do usuário, sem forçar UTC
-                    const horaFormatada = dataAgendamentoObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); 
+                    // Exibe no fuso horário local do usuário, sem forçar UTC
+                    const dataFormatada = dataAgendamentoObj.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+                    const horaFormatada = dataAgendamentoObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
                     // --- FIM DA MUDANÇA PARA EXIBIÇÃO DE DATA/HORA ---
 
                     const nomesProcedimentos = ag.procedimentos.map(p => p.nome).join(', ');
@@ -319,18 +318,20 @@
             const dataInput = document.getElementById('dataAgendamento').value; // Ex: "2025-07-15"
             const horaInput = document.getElementById('horaAgendamento').value; // Ex: "20:00"
 
-            // --- NOVA MUDANÇA AQUI: Volta para new Date() para interpretar no fuso horário local ---
+            // Divida e converta para números
+            const [ano, mes, dia] = dataInput.split('-').map(Number);
+            const [horas, minutos] = horaInput.split(':').map(Number);
+
             const payload = {
                 cliente: selectedClientIdInput.value,
-                dataAgendamento: new Date(`${dataInput}T${horaInput}:00`), // Adiciona segundos para formar ISO string completa
+                // Cria a data em UTC com base nos valores selecionados localmente
+                dataAgendamento: new Date(dataInput + 'T' + horaInput), // Volta ao formato anterior que usa o fuso horário local
                 procedimentos: [...agendamentoForm.querySelectorAll('.procedimento-row')].map(row => ({ nome: row.querySelector('[name=procedimento_nome]').value, valor: parseCurrency(row.querySelector('[name=procedimento_valor]').value) })),
                 profissional: document.getElementById('profissional').value,
                 sala: document.getElementById('sala').value,
                 observacoes: document.getElementById('observacoes').value,
                 valorTotal: parseCurrency(valorTotalInput.value)
             };
-            // --- FIM NOVA MUDANÇA ---
-
             const url = editingId ? `/api/agendamentos/${editingId}` : '/api/agendamentos';
             const method = editingId ? 'PUT' : 'POST';
             try {
