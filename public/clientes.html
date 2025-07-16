@@ -132,25 +132,22 @@
 
     <script src="/js/main.js"></script>
     <script>
-        // --- INÍCIO DA MUDANÇA: Lógica para carregar o nome da empresa ---
         document.addEventListener('DOMContentLoaded', () => {
+            // --- INÍCIO DA MUDANÇA: Lógica para carregar o nome da empresa ---
             const companyName = localStorage.getItem('companyName');
-            
             // Elementos HTML para atualizar
             const pageTitleSpan = document.getElementById('pageTitleCompanyName');
             const sidebarCompanyNameElement = document.getElementById('sidebarCompanyName');
 
             if (companyName) {
-                // Atualiza o título da página (dentro da tag <title>)
                 if (pageTitleSpan) {
                     pageTitleSpan.textContent = companyName;
                 }
-                // Atualiza o nome na barra lateral
                 if (sidebarCompanyNameElement) {
                     sidebarCompanyNameElement.textContent = companyName;
                 }
             } else {
-                // Opcional: Redirecionar para o login se o nome da empresa não for encontrado (sessão expirada, etc.)
+                // Opcional: Redirecionar para o login se o nome da empresa não for encontrado
                 // console.warn('Nome da empresa não encontrado no localStorage. Redirecionando para login.');
                 // window.location.href = '/index.html'; 
             }
@@ -393,7 +390,7 @@
                 document.getElementById('numero').value = clienteParaEditar.numero || '';
                 document.getElementById('complemento').value = clienteParaEditar.complemento || '';
                 document.getElementById('bairro').value = clienteParaEditar.bairro || '';
-                document.getElementById('cidade').value = clienteParaEditar.localidade || ''; // Corrigido para data.localidade
+                document.getElementById('cidade').value = clienteParaEditar.cidade || ''; // Corrigido para data.localidade
                 document.getElementById('estado').value = clienteParaEditar.estado || '';
                 // -----------------------------------------------------------
 
@@ -420,10 +417,9 @@
         });
         
         // MUDANÇA AQUI: Movendo o fetchAndRenderClients para dentro do DOMContentLoaded
-        document.addEventListener('DOMContentLoaded', () => {
-             // A lógica do companyName já está aqui em cima, no início do script
-             fetchAndRenderClients(); // Chama a função para carregar clientes após o DOM carregar
-        });
+        // MUDANÇA AQUI: fetchAndRenderClients é a primeira função a ser chamada
+        fetchAndRenderClients(); // Chama a função para carregar clientes após o DOM carregar
+    });
     </script>
 </body>
 </html>
