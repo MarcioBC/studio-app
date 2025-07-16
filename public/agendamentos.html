@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><span id="pageTitleCompanyName">Studio Je Marqui</span> - Agendamentos</title>
+    <title>Studio Je Marqui - Agendamentos</title>
     <link rel="stylesheet" href="/css/global.css">
     <link rel="stylesheet" href="/css/clientes.css">
     <link rel="stylesheet" href="/css/agendamentos.css">
@@ -18,7 +18,7 @@
     <button class="menu-toggle" id="menuToggle">☰</button>
     <div class="dashboard-container">
         <aside class="sidebar" id="sidebar">
-            <h2 id="sidebarCompanyName">Studio Je Marqui</h2>
+            <h2>Studio Je Marqui</h2>
             <nav>
                 <ul>
                     <li><a href="/dashboard.html">Dashboard</a></li>
@@ -26,9 +26,10 @@
                     <li><a href="/agendamentos.html" class="active">Agendamentos</a></li>
                     <li><a href="/livro-caixa.html">Livro Caixa</a></li>
                     <li><a href="/relatorios.html">Relatórios</a></li>
-                    <li><a href="/profissionais.html">Gerenciar profissionais</a></li> 
+                    <li><a href="/profissionais.html">Gerenciar profissionais</a></li>
                     <li><a href="/gerenciar-usuarios.html">Gerenciar Usuários</a></li>
                     <li style="margin-top: auto;"><a href="/api/auth/logout" style="color: #ffc107;">Sair</a></li> 
+    </ul>
                 </ul>
             </nav>
         </aside>
@@ -96,25 +97,6 @@
     <script src="/js/main.js"></script>
     <script>
     document.addEventListener('DOMContentLoaded', () => {
-        // --- INÍCIO DA MUDANÇA: Lógica para carregar o nome da empresa ---
-        const companyName = localStorage.getItem('companyName');
-        // Elementos HTML para atualizar
-        const pageTitleSpan = document.getElementById('pageTitleCompanyName');
-        const sidebarCompanyNameElement = document.getElementById('sidebarCompanyName');
-
-        if (companyName) {
-            if (pageTitleSpan) {
-                pageTitleSpan.textContent = companyName;
-            }
-            if (sidebarCompanyNameElement) {
-                sidebarCompanyNameElement.textContent = companyName;
-            }
-        } else {
-            // Opcional: Redirecionar para o login se o nome da empresa não for encontrado
-            // console.warn('Nome da empresa não encontrado no localStorage. Redirecionando para login.');
-            // window.location.href = '/index.html'; 
-        }
-        // --- FIM DA MUDANÇA ---
     
         let allClients = [];
         let agendamentosData = [];
@@ -202,7 +184,9 @@
             selectedClientIdInput.value = ag.cliente._id;
             selectedClientNameSpan.textContent = ag.cliente.nome;
             
+            // --- INÍCIO DA MUDANÇA PARA EDIÇÃO DE DATA/HORA ---
             const dataAgendamentoObj = new Date(ag.dataAgendamento); // Data em UTC do DB
+            // Ajusta para o fuso horário local ao exibir no input date/time
             const ano = dataAgendamentoObj.getFullYear();
             const mes = (dataAgendamentoObj.getMonth() + 1).toString().padStart(2, '0');
             const dia = dataAgendamentoObj.getDate().toString().padStart(2, '0');
@@ -211,6 +195,7 @@
             const horas = dataAgendamentoObj.getHours().toString().padStart(2, '0');
             const minutos = dataAgendamentoObj.getMinutes().toString().padStart(2, '0');
             document.getElementById('horaAgendamento').value = `${horas}:${minutos}`;
+            // --- FIM DA MUDANÇA PARA EDIÇÃO DE DATA/HORA ---
 
             document.getElementById('profissional').value = ag.profissional;
             document.getElementById('sala').value = ag.sala;
@@ -265,9 +250,13 @@
                     const card = document.createElement('div');
                     card.className = 'client-card';
                     
+                    // --- INÍCIO DA MUDANÇA PARA EXIBIÇÃO DE DATA/HORA ---
                     const dataAgendamentoObj = new Date(ag.dataAgendamento); // Objeto Date em UTC
+                    // Exibe a DATA no fuso horário local do usuário, sem forçar UTC
                     const dataFormatada = dataAgendamentoObj.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }); 
+                    // Exibe a HORA no fuso horário LOCAL do usuário, sem forçar UTC
                     const horaFormatada = dataAgendamentoObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); 
+                    // --- FIM DA MUDANÇA PARA EXIBIÇÃO DE DATA/HORA ---
 
                     const nomesProcedimentos = ag.procedimentos.map(p => p.nome).join(', ');
                     const statusClass = `status-${(ag.status || 'pendente').toLowerCase().replace('ú', 'u')}`;
@@ -276,7 +265,7 @@
                 });
             } catch (error) {
                 agendamentoListDiv.innerHTML = '<p style="color: red;">Erro ao carregar os agendamentos.</p>';
-                console.error("Erro ao carregar os agendamentos no frontend:", error);
+                console.error("Erro ao carregar os agendamentos no frontend:", error); // Adicionei log
             }
         }
         
@@ -330,15 +319,17 @@
             const dataInput = document.getElementById('dataAgendamento').value; // Ex: "2025-07-15"
             const horaInput = document.getElementById('horaAgendamento').value; // Ex: "20:00"
 
+            // --- NOVA MUDANÇA AQUI: Volta para new Date() para interpretar no fuso horário local ---
             const payload = {
                 cliente: selectedClientIdInput.value,
-                dataAgendamento: new Date(`${dataInput}T${horaInput}:00`), // Cria a data no fuso horário local
+                dataAgendamento: new Date(`${dataInput}T${horaInput}:00`), // Adiciona segundos para formar ISO string completa
                 procedimentos: [...agendamentoForm.querySelectorAll('.procedimento-row')].map(row => ({ nome: row.querySelector('[name=procedimento_nome]').value, valor: parseCurrency(row.querySelector('[name=procedimento_valor]').value) })),
                 profissional: document.getElementById('profissional').value,
                 sala: document.getElementById('sala').value,
                 observacoes: document.getElementById('observacoes').value,
                 valorTotal: parseCurrency(valorTotalInput.value)
             };
+            // --- FIM NOVA MUDANÇA ---
 
             const url = editingId ? `/api/agendamentos/${editingId}` : '/api/agendamentos';
             const method = editingId ? 'PUT' : 'POST';
@@ -354,7 +345,7 @@
                 }
             } catch (error) {
                 alert('Erro de conexão ao salvar.');
-                console.error("Erro de conexão ao salvar agendamento no frontend:", error);
+                console.error("Erro de conexão ao salvar agendamento no frontend:", error); // Adicionei log
             }
         });
 
@@ -390,8 +381,7 @@
                         });
                         if (response.ok) updateAll();
                         else alert('Erro ao atualizar status.');
-                    }
-                    catch (error) { alert('Erro de conexão.'); }
+                    } catch (error) { alert('Erro de conexão.'); }
                 }
             }
         });
