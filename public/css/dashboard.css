@@ -14,13 +14,24 @@
     box-shadow: 0 4px 8px rgba(0,0,0,0.07);
     text-align: center;
     border-left: 5px solid; /* Borda colorida para destaque */
+    /* Garante que o conteúdo não force uma largura mínima além do padding */
+    box-sizing: border-box; 
+    /* Adicionei min-width para garantir que o card não fique muito estreito em algumas resoluções */
+    min-width: 180px; /* Ajuste conforme necessário para o conteúdo não quebrar */
 }
 
 .dashboard-card h3 {
     margin-top: 0;
-    font-size: 1em;
+    /* Ajuste o tamanho da fonte para que seja consistente e caiba melhor. 1.1em ou 1.2em pode ser melhor */
+    font-size: 1.1em; /* Era 1em, aumentei ligeiramente para testar */
     color: #6c757d;
     text-transform: uppercase;
+    
+    /* --- ADIÇÕES PARA EVITAR QUEBRA DE LINHA E GERENCIAR EXCESSO DE TEXTO --- */
+    white-space: nowrap; /* Impede que o texto quebre para a próxima linha */
+    overflow: hidden; /* Oculta qualquer texto que exceda a largura do contêiner */
+    text-overflow: ellipsis; /* Adiciona "..." se o texto for muito longo */
+    /* --- FIM DAS ADIÇÕES --- */
 }
 
 .dashboard-card .count {
@@ -47,3 +58,63 @@
     }
 }
 
+/* --- Agendas do Dia --- */
+.agenda-do-dia {
+    margin-top: 30px;
+}
+
+.agenda-do-dia h2 {
+    color: #343a40;
+    margin-bottom: 20px;
+}
+
+.agenda-item {
+    background-color: #ffffff;
+    padding: 15px 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    margin-bottom: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap; /* Permite que os itens quebrem linha em telas menores */
+    gap: 10px; /* Espaçamento entre os itens */
+}
+
+.agenda-item-details {
+    flex: 1; /* Ocupa o espaço disponível */
+    min-width: 200px; /* Garante que não fique muito estreito */
+}
+
+.agenda-item-details strong {
+    color: #343a40;
+    font-size: 1.1em;
+}
+
+.agenda-item-details small {
+    display: block; /* Garante que "Procedimentos" e "Profissional" fiquem em nova linha */
+    color: #6c757d;
+    margin-top: 5px;
+}
+
+.agenda-item .valor {
+    font-size: 1.2em;
+    font-weight: 700;
+    color: #28a745; /* Cor verde para valores */
+}
+
+/* Botão de Concluir */
+.btn-concluir {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    font-size: 0.9em;
+}
+
+.btn-concluir:hover {
+    background-color: #0056b3;
+}
