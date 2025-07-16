@@ -53,14 +53,33 @@
                     statusMessage.textContent = 'Login bem-sucedido! A entrar no sistema...';
                     statusMessage.style.color = 'green';
                     
-                    // --- MUDANÇA AQUI: SALVANDO companyName NO localStorage ---
-                    localStorage.setItem('token', result.token);
-                    localStorage.setItem('userRole', result.user.role);
-                    localStorage.setItem('companyId', result.user.companyId);
-                    localStorage.setItem('companyName', result.user.companyName); // <-- LINHA ADICIONADA/MODIFICADA
-                    // --- FIM DA MUDANÇA ---
+                    // --- ADICIONEI ESTES CONSOLE.LOGS PARA DEPURAR OS DADOS RECEBIDOS ---
+                    console.log("Resposta JSON completa do login:", result);
+                    console.log("Token recebido:", result.token);
+                    console.log("Dados do objeto 'user' recebidos:", result.user);
+                    
+                    // Verificações antes de acessar propriedades do 'user'
+                    if (result.user) { 
+                        console.log("Role do usuário:", result.user.role);
+                        console.log("Company ID do usuário:", result.user.companyId);
+                        console.log("Company Name do usuário:", result.user.companyName);
+                    } else {
+                        console.warn("Objeto 'user' não encontrado na resposta do login. localStorage pode falhar.");
+                    }
+                    // --- FIM DOS CONSOLE.LOGS DE DEPURACAO ---
 
-                    // Redireciona para o dashboard após o login
+                    // --- Salvando dados no localStorage ---
+                    localStorage.setItem('token', result.token);
+                    localStorage.setItem('userRole', result.user ? result.user.role : ''); // Adicionado ? para segurança
+                    localStorage.setItem('companyId', result.user ? result.user.companyId : ''); // Adicionado ? para segurança
+                    localStorage.setItem('companyName', result.user ? result.user.companyName : ''); // Adicionado ? para segurança
+                    
+                    console.log("Dados salvos no localStorage:"); // DEBUG
+                    console.log("LS - Token:", localStorage.getItem('token')); // DEBUG
+                    console.log("LS - Company Name:", localStorage.getItem('companyName')); // DEBUG
+
+
+                    // Redireciona para o dashboard
                     window.location.href = '/dashboard.html';
                 } else {
                     statusMessage.textContent = `Erro: ${result.message}`;
@@ -69,6 +88,7 @@
             } catch (error) {
                 statusMessage.textContent = 'Erro de conexão. Tente novamente.';
                 statusMessage.style.color = 'red';
+                console.error("Erro no fetch de login ou processamento da resposta:", error); // DEBUG
             }
         });
     </script>

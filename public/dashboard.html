@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Studio Je Marqui - Dashboard</title>
+    <title><span id="pageTitleCompanyName">Studio Je Marqui</span> - Dashboard</title>
     <link rel="stylesheet" href="/css/global.css">
     <link rel="stylesheet" href="/css/clientes.css">
     <link rel="stylesheet" href="/css/agendamentos.css">
@@ -13,7 +13,7 @@
     <button class="menu-toggle" id="menuToggle">☰</button>
     <div class="dashboard-container">
         <aside class="sidebar" id="sidebar">
-            <h2>Studio Je Marqui</h2>
+            <h2 id="sidebarCompanyName">Studio Je Marqui</h2>
             <nav>
                 <ul>
                     <li><a href="/dashboard.html" class="active">Dashboard</a></li>
@@ -31,7 +31,7 @@
 
         <main class="main-content">
             <header class="header">
-                <h1>Dashboard</h1>
+                <h1>Dashboard - <span id="dashboardHeaderCompanyName">Studio Je Marqui</span></h1>
             </header>
 
             <section class="dashboard-cards">
@@ -65,7 +65,34 @@
     <script src="/js/main.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // A lógica do menu foi removida daqui e está no main.js
+            // --- INÍCIO DA MUDANÇA: Lógica para carregar o nome da empresa ---
+            const companyName = localStorage.getItem('companyName');
+            
+            // Elementos HTML para atualizar
+            const pageTitleSpan = document.getElementById('pageTitleCompanyName');
+            const sidebarCompanyNameElement = document.getElementById('sidebarCompanyName');
+            const dashboardHeaderCompanyNameElement = document.getElementById('dashboardHeaderCompanyName');
+
+            if (companyName) {
+                // Atualiza o título da página (dentro da tag <title>)
+                if (pageTitleSpan) {
+                    pageTitleSpan.textContent = companyName;
+                }
+                // Atualiza o nome na barra lateral
+                if (sidebarCompanyNameElement) {
+                    sidebarCompanyNameElement.textContent = companyName;
+                }
+                // Atualiza o nome no cabeçalho do dashboard
+                if (dashboardHeaderCompanyNameElement) {
+                    dashboardHeaderCompanyNameElement.textContent = companyName;
+                }
+            } else {
+                // Opcional: Redirecionar para o login se o nome da empresa não for encontrado (sessão expirada, etc.)
+                // console.warn('Nome da empresa não encontrado no localStorage. Redirecionando para login.');
+                // window.location.href = '/index.html'; 
+            }
+            // --- FIM DA MUDANÇA ---
+
 
             const formatAsCurrency = (value) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 
