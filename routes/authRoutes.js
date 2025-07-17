@@ -5,12 +5,9 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User.js');
-const Company = require('../models/Company.js'); // CRÍTICO: Este modelo PRECISA ser importado
+const Company = require('../models/Company.js'); 
 
-// ROTA DE REGISTRO SEGURA (VALIDA O PIN DA EMPRESA)
-// Conteúdo da rota /register omitido para foco na rota /login
-// Certifique-se que sua rota /register está conforme as últimas correções para ela
-// ...
+// ... (sua rota /register, que não foi incluída aqui para foco) ...
 
 // ROTA DE LOGIN
 router.post('/login', async (req, res) => {
@@ -30,12 +27,12 @@ router.post('/login', async (req, res) => {
         }
 
         // 3. Busca a empresa usando o companyId do usuário
-        // CRÍTICO: Certifique-se que user.companyId existe e company.name também
         const company = await Company.findById(user.companyId); 
 
-        // --- ADICIONADOS CONSOLE.LOGS PARA DEPURAR A VARIÁVEL 'company' E 'company.name' ---
+        // --- CONSOLE.LOGS DE DEPURACAO ---
         console.log("DEBUG BACKEND LOGIN: Objeto 'company' encontrado:", company); 
-        console.log("DEBUG BACKEND LOGIN: company.name a ser enviado:", company ? company.name : "company ou company.name é nulo/undefined"); 
+        // AQUI ESTÁ A MUDANÇA: Usando company._doc.name para depurar o valor
+        console.log("DEBUG BACKEND LOGIN: company.name a ser enviado (com _doc):", company ? company._doc.name : "company é nulo/undefined"); 
         // --- FIM DOS CONSOLE.LOGS ---
 
         if (!company) {
@@ -58,7 +55,7 @@ router.post('/login', async (req, res) => {
                 email: user.email,
                 companyId: user.companyId,
                 role: user.role,
-                companyName: company ? company.name : undefined // <--- SAFE GUARD ADICIONADO AQUI TAMBÉM
+                companyName: company._doc.name // <--- CORREÇÃO CRÍTICA AQUI: Use company._doc.name
             }
         });
 
