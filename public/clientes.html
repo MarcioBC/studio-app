@@ -133,10 +133,8 @@
     <script src="/js/main.js"></script>
     <script>
     document.addEventListener('DOMContentLoaded', () => {
-        // --- INÍCIO DA MUDANÇA: Lógica para carregar o nome da empresa ---
+        // --- Lógica para carregar o nome da empresa ---
         const companyName = localStorage.getItem('companyName');
-        // Elementos HTML para atualizar
-        // const pageTitleSpan = document.getElementById('pageTitleCompanyName'); // REMOVIDO/COMENTADO
         const sidebarCompanyNameElement = document.getElementById('sidebarCompanyName');
 
         if (companyName) {
@@ -149,13 +147,11 @@
             if (sidebarCompanyNameElement) {
                 sidebarCompanyNameElement.textContent = "Studio Je Marqui"; // Fallback para sidebar
             }
-            // Opcional: Redirecionar para o login se o nome da empresa não for encontrado
-            // console.warn('Nome da empresa não encontrado no localStorage. Redirecionando para login.');
-            // window.location.href = '/index.html'; 
         }
         // --- FIM DA MUDANÇA ---
 
         // --- INÍCIO DA MUDANÇA: Lógica do menu hambúrguer diretamente no clientes.html ---
+        // Movida para o início do DOMContentLoaded para garantir que seja processada cedo.
         const menuToggle = document.getElementById('menuToggle');
         const sidebar = document.getElementById('sidebar');
 
@@ -173,7 +169,6 @@
 
         // --- Variáveis Globais e Referências de UI ---
         let clientsData = [];
-        // Removido menuToggle e sidebar daqui, pois já foram definidos acima para o listener local.
         const modal = document.getElementById('clientModal');
         const openModalBtn = document.getElementById('openModalBtn');
         const closeModalBtn = document.getElementById('closeModalBtn');
@@ -212,8 +207,6 @@
         applyMask(cpfInput, maskCPF);
 
         // --- Funções de Controle de UI ---
-        // Removido if (menuToggle && sidebar) daqui, pois a lógica foi movida para cima
-
         function resetFormAndModal() {
             clientForm.reset();
             clientForm.removeAttribute('data-editing-id');
