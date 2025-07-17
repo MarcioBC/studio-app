@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><span id="pageTitleCompanyName">Studio Je Marqui</span> - Dashboard</title>
+    <title>Dashboard</title> 
     <link rel="stylesheet" href="/css/global.css">
     <link rel="stylesheet" href="/css/clientes.css">
     <link rel="stylesheet" href="/css/agendamentos.css">
@@ -13,7 +13,7 @@
     <button class="menu-toggle" id="menuToggle">☰</button>
     <div class="dashboard-container">
         <aside class="sidebar" id="sidebar">
-            <h2 id="sidebarCompanyName">Studio Je Marqui</h2>
+            <h2 id="sidebarCompanyName"></h2> 
             <nav>
                 <ul>
                     <li><a href="/dashboard.html" class="active">Dashboard</a></li>
@@ -31,7 +31,7 @@
 
         <main class="main-content">
             <header class="header">
-                <h1>Dashboard - <span id="dashboardHeaderCompanyName">Studio Je Marqui</span></h1>
+                <h1>Dashboard - <span id="dashboardHeaderCompanyName"></span></h1> 
             </header>
 
             <section class="dashboard-cards">
@@ -65,19 +65,25 @@
     <script src="/js/main.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // --- INÍCIO DA MUDANÇA: Lógica para carregar o nome da empresa ---
+            // --- Lógica para carregar o nome da empresa (CORRIGIDO) ---
             const companyName = localStorage.getItem('companyName');
-            
+            console.log("Dashboard: companyName lido do localStorage:", companyName); // DEBUG
+
             // Elementos HTML para atualizar
-            const pageTitleSpan = document.getElementById('pageTitleCompanyName');
+            // Removido 'pageTitleSpan' pois document.title é atualizado diretamente
             const sidebarCompanyNameElement = document.getElementById('sidebarCompanyName');
             const dashboardHeaderCompanyNameElement = document.getElementById('dashboardHeaderCompanyName');
 
+            // DEBUG: Verificando se os elementos foram encontrados
+            console.log("Dashboard: Elemento sidebarCompanyNameElement encontrado?", !!sidebarCompanyNameElement);
+            console.log("Dashboard: Elemento dashboardHeaderCompanyNameElement encontrado?", !!dashboardHeaderCompanyNameElement);
+
+
             if (companyName) {
-                // Atualiza o título da página (dentro da tag <title>)
-                if (pageTitleSpan) {
-                    pageTitleSpan.textContent = companyName;
-                }
+                console.log("Dashboard: companyName encontrado no localStorage. Atualizando elementos UI."); // DEBUG
+                // ATUALIZA O TÍTULO DA ABA DO NAVEGADOR DIRETAMENTE
+                document.title = `${companyName} - Dashboard`; 
+                
                 // Atualiza o nome na barra lateral
                 if (sidebarCompanyNameElement) {
                     sidebarCompanyNameElement.textContent = companyName;
@@ -87,11 +93,19 @@
                     dashboardHeaderCompanyNameElement.textContent = companyName;
                 }
             } else {
+                console.warn("Dashboard: companyName NÃO encontrado no localStorage. O nome padrão 'Studio Je Marqui' será usado."); // DEBUG
+                // Se o nome não for encontrado, defina um nome padrão para a UI
+                document.title = "Studio Je Marqui - Dashboard"; // Define título padrão
+                if (sidebarCompanyNameElement) {
+                    sidebarCompanyNameElement.textContent = "Studio Je Marqui";
+                }
+                if (dashboardHeaderCompanyNameElement) {
+                    dashboardHeaderCompanyNameElement.textContent = "Studio Je Marqui";
+                }
                 // Opcional: Redirecionar para o login se o nome da empresa não for encontrado (sessão expirada, etc.)
-                // console.warn('Nome da empresa não encontrado no localStorage. Redirecionando para login.');
                 // window.location.href = '/index.html'; 
             }
-            // --- FIM DA MUDANÇA ---
+            // --- FIM DA LÓGICA DE CARREGAMENTO DE NOME ---
 
 
             const formatAsCurrency = (value) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
@@ -147,7 +161,37 @@
 
             fetchDashboardSummary();
             fetchHojeAgendamentos();
-        });
-    </script>
+
+            // --- INÍCIO DA LÓGICA DE INATIVIDADE ---
+        const INACTIVITY_TIME = 10 * 60 * 1000; // 10 minutos em milissegundos
+        // Se você quer 10 segundos para teste: const INACTIVITY_TIME = 10 * 1000; // 10 segundos
+        let timeoutId;
+
+        function startInactivityTimer() {
+            // Limpa qualquer temporizador anterior
+            clearTimeout(timeoutId);
+            // Define um novo temporizador
+            timeoutId = setTimeout(logoutUser, INACTIVITY_TIME);
+        }
+
+        function resetInactivityTimer() {
+            // Chama startInactivityTimer apenas se o usuário estiver logado
+            if (localStorage.getItem('token')) { // Verifica se há um token (indicando que está logado)
+                startInactivityTimer();
+            }
+        }
+
+        // Inicia o temporizador quando a página carrega
+        resetInactivityTimer();
+
+        // Monitora eventos de atividade do usuário
+        document.addEventListener('mousemove', resetInactivityTimer);
+        document.addEventListener('keypress', resetInactivityTimer);
+        document.addEventListener('click', resetInactivityTimer);
+        document.addEventListener('scroll', resetInactivityTimer);
+        // --- FIM DA LÓGICA DE INATIVIDADE ---
+    });
+        
+         </script>
 </body>
 </html>
