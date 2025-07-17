@@ -155,11 +155,25 @@
         }
         // --- FIM DA MUDANÇA ---
 
+        // --- INÍCIO DA MUDANÇA: Lógica do menu hambúrguer diretamente no clientes.html ---
+        const menuToggle = document.getElementById('menuToggle');
+        const sidebar = document.getElementById('sidebar');
+
+        if (menuToggle && sidebar) {
+            console.log("clientes.html: Menu hambúrguer e sidebar encontrados. Adicionando listener.");
+            menuToggle.addEventListener('click', () => {
+                sidebar.classList.toggle('active');
+                console.log("clientes.html: Menu hambúrguer clicado. Sidebar toggled.");
+            });
+        } else {
+            console.warn("clientes.html: Elementos do menu hambúrguer (menuToggle ou sidebar) não encontrados.");
+        }
+        // --- FIM DA MUDANÇA ---
+
 
         // --- Variáveis Globais e Referências de UI ---
         let clientsData = [];
-        const menuToggle = document.getElementById('menuToggle');
-        const sidebar = document.getElementById('sidebar');
+        // Removido menuToggle e sidebar daqui, pois já foram definidos acima para o listener local.
         const modal = document.getElementById('clientModal');
         const openModalBtn = document.getElementById('openModalBtn');
         const closeModalBtn = document.getElementById('closeModalBtn');
@@ -198,9 +212,7 @@
         applyMask(cpfInput, maskCPF);
 
         // --- Funções de Controle de UI ---
-        if (menuToggle && sidebar) {
-            menuToggle.addEventListener('click', () => sidebar.classList.toggle('active'));
-        }
+        // Removido if (menuToggle && sidebar) daqui, pois a lógica foi movida para cima
 
         function resetFormAndModal() {
             clientForm.reset();
