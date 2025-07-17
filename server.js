@@ -33,7 +33,7 @@ mongoose.connect(process.env.MONGODB_URI)
 
 // --- Importar Modelos (necessários para a nova rota /api/dashboard) ---
 const User = require('./models/User'); 
-const Agendamento = require('./('./models/Agendamento'); // Corrigido o caminho
+const Agendamento = require('./models/Agendamento'); // <-- CORRIGIDO AQUI!
 const Cliente = require('./models/Cliente'); 
 const Transacao = require('./models/Transacao'); 
 // --- Fim dos novos imports de Modelos ---
