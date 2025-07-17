@@ -47,48 +47,33 @@
                     body: JSON.stringify({ email, senha })
                 });
 
-                const result = await response.json();
+                // Tenta parsear a resposta como JSON. Se a resposta não for JSON, este ponto vai lançar um erro.
+                const result = await response.json(); 
 
                 if (response.ok) {
                     statusMessage.textContent = 'Login bem-sucedido! A entrar no sistema...';
                     statusMessage.style.color = 'green';
                     
-                    // --- ADICIONEI ESTES CONSOLE.LOGS PARA DEPURAR OS DADOS RECEBIDOS ---
-                    console.log("Resposta JSON completa do login:", result);
-                    console.log("Token recebido:", result.token);
-                    console.log("Dados do objeto 'user' recebidos:", result.user);
-                    
-                    // Verificações antes de acessar propriedades do 'user'
-                    if (result.user) { 
-                        console.log("Role do usuário:", result.user.role);
-                        console.log("Company ID do usuário:", result.user.companyId);
-                        console.log("Company Name do usuário:", result.user.companyName);
-                    } else {
-                        console.warn("Objeto 'user' não encontrado na resposta do login. localStorage pode falhar.");
-                    }
-                    // --- FIM DOS CONSOLE.LOGS DE DEPURACAO ---
-
-                    // --- Salvando dados no localStorage ---
+                    // Salvando dados no localStorage
                     localStorage.setItem('token', result.token);
-                    localStorage.setItem('userRole', result.user ? result.user.role : ''); // Adicionado ? para segurança
-                    localStorage.setItem('companyId', result.user ? result.user.companyId : ''); // Adicionado ? para segurança
-                    localStorage.setItem('companyName', result.user ? result.user.companyName : ''); // Adicionado ? para segurança
+                    // Usando safe guards para garantir que as propriedades existam antes de acessar
+                    localStorage.setItem('userRole', result.user && result.user.role ? result.user.role : ''); 
+                    localStorage.setItem('companyId', result.user && result.user.companyId ? result.user.companyId : ''); 
+                    localStorage.setItem('companyName', result.user && result.user.companyName ? result.user.companyName : ''); 
                     
-                    console.log("Dados salvos no localStorage:"); // DEBUG
-                    console.log("LS - Token:", localStorage.getItem('token')); // DEBUG
-                    console.log("LS - Company Name:", localStorage.getItem('companyName')); // DEBUG
-
-
                     // Redireciona para o dashboard
                     window.location.href = '/dashboard.html';
                 } else {
+                    // Se a resposta não for OK (ex: 400, 401, 500), exibe a mensagem de erro do servidor
                     statusMessage.textContent = `Erro: ${result.message}`;
                     statusMessage.style.color = 'red';
                 }
             } catch (error) {
-                statusMessage.textContent = 'Erro de conexão. Tente novamente.';
+                // Este bloco captura erros de rede (ex: servidor offline, CORS bloqueado)
+                // ou erros ao processar a resposta (ex: resposta não é JSON)
+                statusMessage.textContent = 'Erro de conexão ou problema na resposta do servidor. Tente novamente.';
                 statusMessage.style.color = 'red';
-                console.error("Erro no fetch de login ou processamento da resposta:", error); // DEBUG
+                console.error("Erro no fetch de login ou processamento da resposta:", error); 
             }
         });
     </script>
