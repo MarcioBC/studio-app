@@ -96,10 +96,8 @@
     <script src="/js/main.js"></script>
     <script>
     document.addEventListener('DOMContentLoaded', () => {
-        // --- INÍCIO DA MUDANÇA: Lógica para carregar o nome da empresa ---
+        // --- Lógica para carregar o nome da empresa ---
         const companyName = localStorage.getItem('companyName');
-        // Elementos HTML para atualizar
-        // const pageTitleSpan = document.getElementById('pageTitleCompanyName'); // REMOVIDO/COMENTADO
         const sidebarCompanyNameElement = document.getElementById('sidebarCompanyName');
 
         if (companyName) {
@@ -115,6 +113,21 @@
             // Opcional: Redirecionar para o login se o nome da empresa não for encontrado
             // console.warn('Nome da empresa não encontrado no localStorage. Redirecionando para login.');
             // window.location.href = '/index.html'; 
+        }
+        // --- FIM DA MUDANÇA ---
+    
+        // --- Lógica do menu hambúrguer diretamente no agendamentos.html ---
+        const menuToggle = document.getElementById('menuToggle');
+        const sidebar = document.getElementById('sidebar');
+
+        if (menuToggle && sidebar) {
+            console.log("agendamentos.html: Menu hambúrguer e sidebar encontrados. Adicionando listener.");
+            menuToggle.addEventListener('click', () => {
+                sidebar.classList.toggle('active');
+                console.log("agendamentos.html: Menu hambúrguer clicado. Sidebar toggled.");
+            });
+        } else {
+            console.warn("agendamentos.html: Elementos do menu hambúrguer (menuToggle ou sidebar) não encontrados.");
         }
         // --- FIM DA MUDANÇA ---
     
@@ -230,14 +243,38 @@
 
         async function fetchAllClients() {
             try {
-                const response = await fetch('/api/clientes');
+                // MUDANÇA AQUI: Pega o token para a requisição autenticada
+                const token = localStorage.getItem('token'); 
+                const response = await fetch('/api/clientes', {
+                    headers: {
+                        'Authorization': `Bearer ${token}` // ADICIONA O CABEÇALHO DE AUTORIZAÇÃO
+                    }
+                });
+                // TRATAMENTO DO ERRO 401/403:
+                if (response.status === 401 || response.status === 403) {
+                    console.error("Não autorizado ao buscar clientes. Redirecionando para login.");
+                    logoutUser(); // Chama a função de logout (limpa localStorage e redireciona)
+                    return; // Interrompe a execução
+                }
                 allClients = await response.json();
             } catch (error) { console.error('Erro ao buscar clientes:', error); }
         }
 
         async function fetchAndPopulateProfissionais() {
             try {
-                const response = await fetch('/api/profissionais');
+                // MUDANÇA AQUI: Pega o token para a requisição autenticada
+                const token = localStorage.getItem('token'); 
+                const response = await fetch('/api/profissionais', {
+                    headers: {
+                        'Authorization': `Bearer ${token}` // ADICIONA O CABEÇALHO DE AUTORIZAÇÃO
+                    }
+                });
+                // TRATAMENTO DO ERRO 401/403:
+                if (response.status === 401 || response.status === 403) {
+                    console.error("Não autorizado ao buscar profissionais. Redirecionando para login.");
+                    logoutUser(); 
+                    return; 
+                }
                 const profissionais = await response.json();
                 profissionalSelect.innerHTML = '<option value="">Selecione um profissional</option>'; 
                 profissionais.forEach(prof => {
@@ -248,6 +285,7 @@
                 });
             } catch (error) {
                 profissionalSelect.innerHTML = '<option value="">Erro ao carregar</option>';
+                console.error('Erro ao buscar profissionais:', error); // Adicionei log
             }
         }
 
@@ -255,11 +293,23 @@
             agendamentoListDiv.innerHTML = '<p>Carregando agendamentos...</p>';
             const url = `/api/agendamentos?mes=${mesAtual + 1}&ano=${anoAtual}`;
             try {
-                const response = await fetch(url);
+                // MUDANÇA AQUI: Pega o token para a requisição autenticada
+                const token = localStorage.getItem('token'); 
+                const response = await fetch(url, {
+                    headers: {
+                        'Authorization': `Bearer ${token}` // ADICIONA O CABEÇALHO DE AUTORIZAÇÃO
+                    }
+                });
+                // TRATAMENTO DO ERRO 401/403:
+                if (response.status === 401 || response.status === 403) {
+                    console.error("Não autorizado ao buscar agendamentos. Redirecionando para login.");
+                    logoutUser(); 
+                    return; 
+                }
                 const agendamentos = await response.json();
                 agendamentosData = agendamentos;
                 agendamentoListDiv.innerHTML = '';
-                if (agendamentos.length === 0) {
+                if (!Array.isArray(agendamentos) || agendamentos.length === 0) { // VERIFICA SE É ARRAY
                     agendamentoListDiv.innerHTML = `<p>Nenhum agendamento encontrado para ${currentMonthDisplay.textContent}.</p>`;
                     return;
                 }
@@ -345,7 +395,22 @@
             const url = editingId ? `/api/agendamentos/${editingId}` : '/api/agendamentos';
             const method = editingId ? 'PUT' : 'POST';
             try {
-                const response = await fetch(url, { method: method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                // MUDANÇA AQUI: Pega o token para a requisição autenticada
+                const token = localStorage.getItem('token'); 
+                const response = await fetch(url, { 
+                    method: method, 
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}` // ADICIONA O CABEÇALHO DE AUTORIZAÇÃO
+                    }, 
+                    body: JSON.stringify(payload) 
+                });
+                // TRATAMENTO DO ERRO 401/403:
+                if (response.status === 401 || response.status === 403) {
+                    console.error("Não autorizado ao salvar agendamento. Redirecionando para login.");
+                    logoutUser(); 
+                    return; 
+                }
                 const result = await response.json();
                 if (response.ok) {
                     alert(result.message);
@@ -370,11 +435,23 @@
             if (target.classList.contains('icon-delete')) {
                 if (confirm('Tem certeza que deseja excluir este agendamento?')) {
                     try {
-                        const response = await fetch(`/api/agendamentos/${id}`, { method: 'DELETE' });
-                        const result = await response.json();
-                        alert(result.message);
-                        if (response.ok) updateAll();
-                    } catch (error) { alert('Erro de conexão.'); }
+                        // MUDANÇA AQUI: Pega o token para a requisição autenticada
+                        const token = localStorage.getItem('token'); 
+                        const response = await fetch(`/api/agendamentos/${id}`, { 
+                            method: 'DELETE',
+                            headers: { 
+                                'Authorization': `Bearer ${token}` // ADICIONA O CABEÇALHO DE AUTORIZAÇÃO
+                            }
+                        });
+                        // TRATAMENTO DO ERRO 401/403:
+                        if (response.status === 401 || response.status === 403) {
+                            console.error("Não autorizado ao excluir agendamento. Redirecionando para login.");
+                            logoutUser(); 
+                            return; 
+                        }
+                        const result = await response.json(); // Consumir a resposta mesmo se não for OK para alert
+                        if (response.ok) { alert(result.message); updateAll(); } else { alert(`Erro: ${result.message || 'Erro ao excluir o agendamento.'}`); } // Melhorar mensagem de erro
+                    } catch (error) { alert('Erro de conexão ao excluir.'); console.error("Erro de conexão ao excluir agendamento no frontend:", error); }
                 }
             }
             if (target.classList.contains('status')) {
@@ -385,15 +462,26 @@
                 
                 if (nextStatus) {
                     try {
+                        // MUDANÇA AQUI: Pega o token para a requisição autenticada
+                        const token = localStorage.getItem('token'); 
                         const response = await fetch(`/api/agendamentos/${id}/status`, {
                             method: 'PATCH',
-                            headers: { 'Content-Type': 'application/json' },
+                            headers: { 
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${token}` // ADICIONA O CABEÇALHO DE AUTORIZAÇÃO
+                            },
                             body: JSON.stringify({ status: nextStatus })
                         });
-                        if (response.ok) updateAll();
-                        else alert('Erro ao atualizar status.');
+                        // TRATAMENTO DO ERRO 401/403:
+                        if (response.status === 401 || response.status === 403) {
+                            console.error("Não autorizado ao atualizar status. Redirecionando para login.");
+                            logoutUser(); 
+                            return; 
+                        }
+                        const result = await response.json(); // Consumir a resposta
+                        if (response.ok) { alert(result.message); updateAll(); } else { alert(`Erro: ${result.message || 'Erro ao atualizar status.'}`); } // Melhorar mensagem de erro
                     }
-                    catch (error) { alert('Erro de conexão.'); }
+                    catch (error) { alert('Erro de conexão.'); console.error("Erro de conexão ao atualizar status no frontend:", error); }
                 }
             }
         });
@@ -408,23 +496,18 @@
         let timeoutId;
 
         function startInactivityTimer() {
-            // Limpa qualquer temporizador anterior
             clearTimeout(timeoutId);
-            // Define um novo temporizador
             timeoutId = setTimeout(logoutUser, INACTIVITY_TIME);
         }
 
         function resetInactivityTimer() {
-            // Chama startInactivityTimer apenas se o usuário estiver logado
-            if (localStorage.getItem('token')) { // Verifica se há um token (indicando que está logado)
+            if (localStorage.getItem('token')) {
                 startInactivityTimer();
             }
         }
 
-        // Inicia o temporizador quando a página carrega
-        resetInactivityTimer();
+        resetInactivityTimer(); // Inicia o temporizador quando a página carrega
 
-        // Monitora eventos de atividade do usuário
         document.addEventListener('mousemove', resetInactivityTimer);
         document.addEventListener('keypress', resetInactivityTimer);
         document.addEventListener('click', resetInactivityTimer);

@@ -159,12 +159,10 @@
     <script src="/js/main.js"></script>
     <script>
     document.addEventListener('DOMContentLoaded', () => {
-        // --- INÍCIO DA MUDANÇA: Lógica para carregar o nome da empresa ---
+        // --- Lógica para carregar o nome da empresa ---
         const companyName = localStorage.getItem('companyName');
-        // Elementos HTML para atualizar
-        // const pageTitleSpan = document.getElementById('pageTitleCompanyName'); // REMOVIDO/COMENTADO
         const sidebarCompanyNameElement = document.getElementById('sidebarCompanyName');
-        const reportHeaderCompanyNameElement = document.getElementById('reportHeaderCompanyName'); // NOVO ELEMENTO
+        const reportHeaderCompanyNameElement = document.getElementById('reportHeaderCompanyName'); 
 
         if (companyName) {
             document.title = `${companyName} - Relatórios`; // Atualiza o título da página
@@ -182,9 +180,21 @@
             if (reportHeaderCompanyNameElement) { // Fallback para cabeçalho do relatório
                 reportHeaderCompanyNameElement.textContent = "Studio Je Marqui";
             }
-            // Opcional: Redirecionar para o login se o nome da empresa não for encontrado
-            // console.warn('Nome da empresa não encontrado no localStorage. Redirecionando para login.');
-            // window.location.href = '/index.html'; 
+        }
+        // --- FIM DA MUDANÇA ---
+
+        // --- Lógica do menu hambúrguer diretamente no relatorios.html ---
+        const menuToggle = document.getElementById('menuToggle');
+        const sidebar = document.getElementById('sidebar');
+
+        if (menuToggle && sidebar) {
+            console.log("relatorios.html: Menu hambúrguer e sidebar encontrados. Adicionando listener.");
+            menuToggle.addEventListener('click', () => {
+                sidebar.classList.toggle('active');
+                console.log("relatorios.html: Menu hambúrguer clicado. Sidebar toggled.");
+            });
+        } else {
+            console.warn("relatorios.html: Elementos do menu hambúrguer (menuToggle ou sidebar) não encontrados.");
         }
         // --- FIM DA MUDANÇA ---
 
@@ -257,7 +267,19 @@
             const dataFim = dataFimInput.value;
             const url = `/api/agendamentos/relatorio?dataInicio=${dataInicio}&dataFim=${dataFim}&status=${statusAgendamentoSelecionado}`;
             try {
-                const response = await fetch(url);
+                // MUDANÇA AQUI: Pega o token para a requisição autenticada
+                const token = localStorage.getItem('token'); 
+                const response = await fetch(url, {
+                    headers: {
+                        'Authorization': `Bearer ${token}` // ADICIONA O CABEÇALHO DE AUTORIZAÇÃO
+                    }
+                });
+                // TRATAMENTO DO ERRO 401/403:
+                if (response.status === 401 || response.status === 403) {
+                    console.error("Não autorizado ao gerar relatório de agendamentos. Redirecionando para login.");
+                    logoutUser(); 
+                    return; 
+                }
                 const agendamentos = await response.json();
                 renderTabelaAgendamentos(agendamentos);
             } catch (error) {
@@ -267,7 +289,7 @@
         }
 
         function renderTabelaAgendamentos(agendamentos) {
-            if (agendamentos.length === 0) {
+            if (!Array.isArray(agendamentos) || agendamentos.length === 0) { // VERIFICA SE É ARRAY
                 resultadoAgendamentosDiv.innerHTML = '<p>Nenhum agendamento encontrado para os filtros selecionados.</p>';
                 return;
             }
@@ -300,7 +322,19 @@
             const dataFim = dataFimInput.value;
             const url = `/api/transacoes/relatorio?dataInicio=${dataInicio}&dataFim=${dataFim}`;
             try {
-                const response = await fetch(url);
+                // MUDANÇA AQUI: Pega o token para a requisição autenticada
+                const token = localStorage.getItem('token'); 
+                const response = await fetch(url, {
+                    headers: {
+                        'Authorization': `Bearer ${token}` // ADICIONA O CABEÇALHO DE AUTORIZAÇÃO
+                    }
+                });
+                // TRATAMENTO DO ERRO 401/403:
+                if (response.status === 401 || response.status === 403) {
+                    console.error("Não autorizado ao buscar dados financeiros. Redirecionando para login.");
+                    logoutUser(); 
+                    return; 
+                }
                 const relatorio = await response.json();
                 if (!response.ok) throw new Error(relatorio.message || 'Erro ao buscar dados.');
                 
@@ -315,6 +349,15 @@
         }
 
         function renderRelatorioFinanceiro(relatorio, dataInicio, dataFim) {
+            // VERIFICA SE É OBJETO VÁLIDO E TEM PROPRIEDADES ESPERADAS
+            if (!relatorio || typeof relatorio !== 'object' || !relatorio.summary) {
+                document.getElementById('report-container').classList.add('hidden');
+                document.getElementById('financeiro-initial-message').classList.remove('hidden');
+                document.getElementById('financeiro-initial-message').innerHTML = '<p style="color:red;">Erro: Formato de dados financeiros inválido.</p>';
+                console.error("Formato de dados financeiros recebido é inválido:", relatorio);
+                return;
+            }
+
             // MUDANÇA AQUI: Formatação da data no fuso horário local para o período do relatório
             const fDataInicio = new Date(dataInicio + 'T03:00:00').toLocaleDateString('pt-BR'); // Assume 03:00 UTC para cobrir o dia
             const fDataFim = new Date(dataFim + 'T03:00:00').toLocaleDateString('pt-BR'); // Assume 03:00 UTC para cobrir o dia
@@ -328,20 +371,24 @@
 
             const receitasBody = document.getElementById('receitas-table-body');
             receitasBody.innerHTML = '';
-            relatorio.receitas.forEach(t => {
-                const row = receitasBody.insertRow();
-                // MUDANÇA AQUI: Formatação da data da transação no fuso horário local
-                row.innerHTML = `<td>${new Date(t.data).toLocaleDateString('pt-BR')}</td><td>${t.descricao}</td><td class="text-right">${formatAsCurrency(t.valor)}</td>`;
-            });
+            if (Array.isArray(relatorio.receitas)) { // VERIFICA SE É ARRAY
+                relatorio.receitas.forEach(t => {
+                    const row = receitasBody.insertRow();
+                    // MUDANÇA AQUI: Formatação da data da transação no fuso horário local
+                    row.innerHTML = `<td>${new Date(t.data).toLocaleDateString('pt-BR')}</td><td>${t.descricao}</td><td class="text-right">${formatAsCurrency(t.valor)}</td>`;
+                });
+            }
             document.getElementById('total-table-receitas').innerHTML = `<strong>${formatAsCurrency(totalReceitas)}</strong>`;
 
             const despesasBody = document.getElementById('despesas-table-body');
             despesasBody.innerHTML = '';
-            relatorio.despesas.forEach(t => {
-                const row = despesasBody.insertRow();
-                // MUDANÇA AQUI: Formatação da data da transação no fuso horário local
-                row.innerHTML = `<td>${new Date(t.data).toLocaleDateString('pt-BR')}</td><td>${t.descricao}</td><td class="text-right">${formatAsCurrency(t.valor)}</td>`;
-            });
+            if (Array.isArray(relatorio.despesas)) { // VERIFICA SE É ARRAY
+                relatorio.despesas.forEach(t => {
+                    const row = despesasBody.insertRow();
+                    // MUDANÇA AQUI: Formatação da data da transação no fuso horário local
+                    row.innerHTML = `<td>${new Date(t.data).toLocaleDateString('pt-BR')}</td><td>${t.descricao}</td><td class="text-right">${formatAsCurrency(t.valor)}</td>`;
+                });
+            }
             document.getElementById('total-table-despesas').innerHTML = `<strong>${formatAsCurrency(totalDespesas)}</strong>`;
         }
 
@@ -366,27 +413,21 @@
 
         // --- INÍCIO DA LÓGICA DE INATIVIDADE ---
         const INACTIVITY_TIME = 10 * 60 * 1000; // 10 minutos em milissegundos
-        // Se você quer 10 segundos para teste: const INACTIVITY_TIME = 10 * 1000; // 10 segundos
         let timeoutId;
 
         function startInactivityTimer() {
-            // Limpa qualquer temporizador anterior
             clearTimeout(timeoutId);
-            // Define um novo temporizador
             timeoutId = setTimeout(logoutUser, INACTIVITY_TIME);
         }
 
         function resetInactivityTimer() {
-            // Chama startInactivityTimer apenas se o usuário estiver logado
-            if (localStorage.getItem('token')) { // Verifica se há um token (indicando que está logado)
+            if (localStorage.getItem('token')) {
                 startInactivityTimer();
             }
         }
 
-        // Inicia o temporizador quando a página carrega
-        resetInactivityTimer();
+        resetInactivityTimer(); // Inicia o temporizador quando a página carrega
 
-        // Monitora eventos de atividade do usuário
         document.addEventListener('mousemove', resetInactivityTimer);
         document.addEventListener('keypress', resetInactivityTimer);
         document.addEventListener('click', resetInactivityTimer);

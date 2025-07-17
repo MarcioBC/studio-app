@@ -151,7 +151,6 @@
         // --- FIM DA MUDANÇA ---
 
         // --- INÍCIO DA MUDANÇA: Lógica do menu hambúrguer diretamente no clientes.html ---
-        // Movida para o início do DOMContentLoaded para garantir que seja processada cedo.
         const menuToggle = document.getElementById('menuToggle');
         const sidebar = document.getElementById('sidebar');
 
@@ -249,13 +248,26 @@
         async function fetchAndRenderClients() {
             clientListDiv.innerHTML = '<p>Carregando clientes...</p>';
             try {
-                const response = await fetch('/api/clientes');
+                // MUDANÇA AQUI: Pega o token para a requisição autenticada
+                const token = localStorage.getItem('token'); 
+                const response = await fetch('/api/clientes', {
+                    headers: {
+                        'Authorization': `Bearer ${token}` // ADICIONA O CABEÇALHO DE AUTORIZAÇÃO
+                    }
+                });
+                // TRATAMENTO DO ERRO 401/403:
+                if (response.status === 401 || response.status === 403) {
+                    console.error("Não autorizado ao buscar clientes. Redirecionando para login.");
+                    logoutUser(); // Chama a função de logout (limpa localStorage e redireciona)
+                    return; // Interrompe a execução
+                }
+
                 const clientes = await response.json();
                 clientsData = clientes;
                 clientListDiv.innerHTML = '';
                 clientCountSpan.textContent = clientes.length;
 
-                if (clientes.length === 0) {
+                if (!Array.isArray(clientes) || clientes.length === 0) { // VERIFICA SE É ARRAY
                     clientListDiv.innerHTML = '<p>Nenhum cliente registado ainda.</p>';
                     return;
                 }
@@ -290,11 +302,22 @@
             displayStatus(phoneStatus, '');
             phoneStatus.style.display = 'none';
             try {
+                // MUDANÇA AQUI: Pega o token para a requisição autenticada
+                const token = localStorage.getItem('token'); 
                 const response = await fetch('/api/clientes/check-phone', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}` // ADICIONA O CABEÇALHO DE AUTORIZAÇÃO
+                    },
                     body: JSON.stringify({ telefone: telefone }),
                 });
+                // TRATAMENTO DO ERRO 401/403:
+                if (response.status === 401 || response.status === 403) {
+                    console.error("Não autorizado ao verificar telefone. Redirecionando para login.");
+                    logoutUser(); 
+                    return; 
+                }
                 const data = await response.json();
                 if (data.success) {
                     displayStatus(phoneStatus, data.message, false);
@@ -341,11 +364,22 @@
             displayStatus(formStatus, editingId ? 'A atualizar cliente...' : 'A registar cliente...', false);
 
             try {
+                // MUDANÇA AQUI: Pega o token para a requisição autenticada
+                const token = localStorage.getItem('token'); 
                 const response = await fetch(url, {
                     method: method,
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}` // ADICIONA O CABEÇALHO DE AUTORIZAÇÃO
+                    },
                     body: JSON.stringify(payload), // Envia o payload limpo
                 });
+                // TRATAMENTO DO ERRO 401/403:
+                if (response.status === 401 || response.status === 403) {
+                    console.error("Não autorizado ao salvar cliente. Redirecionando para login.");
+                    logoutUser(); 
+                    return; 
+                }
                 const result = await response.json();
                 if (response.ok) {
                     displayStatus(formStatus, result.message, false);
@@ -367,7 +401,20 @@
             if (target.classList.contains('icon-delete')) {
                 if (confirm('Tem certeza de que deseja excluir este cliente?')) {
                     try {
-                        const response = await fetch(`/api/clientes/${clienteId}`, { method: 'DELETE' });
+                        // MUDANÇA AQUI: Pega o token para a requisição autenticada
+                        const token = localStorage.getItem('token'); 
+                        const response = await fetch(`/api/clientes/${clienteId}`, { 
+                            method: 'DELETE',
+                            headers: { 
+                                'Authorization': `Bearer ${token}` // ADICIONA O CABEÇALHO DE AUTORIZAÇÃO
+                            }
+                        });
+                        // TRATAMENTO DO ERRO 401/403:
+                        if (response.status === 401 || response.status === 403) {
+                            console.error("Não autorizado ao excluir cliente. Redirecionando para login.");
+                            logoutUser(); 
+                            return; 
+                        }
                         if (response.ok) { fetchAndRenderClients(); } else { alert('Erro ao excluir o cliente.'); }
                     } catch (error) { alert('Erro de conexão ao excluir.'); }
                 }
@@ -423,8 +470,6 @@
             } catch (error) { console.error('Erro ao buscar CEP:', error); }
         });
         
-        // MUDANÇA AQUI: Movendo o fetchAndRenderClients para dentro do DOMContentLoaded
-        // MUDANÇA AQUI: fetchAndRenderClients é a primeira função a ser chamada
         fetchAndRenderClients(); // Chama a função para carregar clientes após o DOM carregar
 
         // --- INÍCIO DA LÓGICA DE INATIVIDADE ---
@@ -433,23 +478,18 @@
         let timeoutId;
 
         function startInactivityTimer() {
-            // Limpa qualquer temporizador anterior
             clearTimeout(timeoutId);
-            // Define um novo temporizador
             timeoutId = setTimeout(logoutUser, INACTIVITY_TIME);
         }
 
         function resetInactivityTimer() {
-            // Chama startInactivityTimer apenas se o usuário estiver logado
-            if (localStorage.getItem('token')) { // Verifica se há um token (indicando que está logado)
+            if (localStorage.getItem('token')) {
                 startInactivityTimer();
             }
         }
 
-        // Inicia o temporizador quando a página carrega
-        resetInactivityTimer();
+        resetInactivityTimer(); // Inicia o temporizador quando a página carrega
 
-        // Monitora eventos de atividade do usuário
         document.addEventListener('mousemove', resetInactivityTimer);
         document.addEventListener('keypress', resetInactivityTimer);
         document.addEventListener('click', resetInactivityTimer);

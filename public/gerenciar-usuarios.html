@@ -88,10 +88,8 @@
     <script src="/js/main.js"></script>
     <script>
     document.addEventListener('DOMContentLoaded', () => {
-        // --- INÍCIO DA MUDANÇA: Lógica para carregar o nome da empresa ---
+        // --- Lógica para carregar o nome da empresa ---
         const companyName = localStorage.getItem('companyName');
-        // Elementos HTML para atualizar
-        // const pageTitleSpan = document.getElementById('pageTitleCompanyName'); // REMOVIDO/COMENTADO
         const sidebarCompanyNameElement = document.getElementById('sidebarCompanyName');
 
         if (companyName) {
@@ -107,6 +105,21 @@
             // Opcional: Redirecionar para o login se o nome da empresa não for encontrado
             // console.warn('Nome da empresa não encontrado no localStorage. Redirecionando para login.');
             // window.location.href = '/index.html'; 
+        }
+        // --- FIM DA MUDANÇA ---
+
+        // --- Lógica do menu hambúrguer diretamente no gerenciar-usuarios.html ---
+        const menuToggle = document.getElementById('menuToggle');
+        const sidebar = document.getElementById('sidebar');
+
+        if (menuToggle && sidebar) {
+            console.log("gerenciar-usuarios.html: Menu hambúrguer e sidebar encontrados. Adicionando listener.");
+            menuToggle.addEventListener('click', () => {
+                sidebar.classList.toggle('active');
+                console.log("gerenciar-usuarios.html: Menu hambúrguer clicado. Sidebar toggled.");
+            });
+        } else {
+            console.warn("gerenciar-usuarios.html: Elementos do menu hambúrguer (menuToggle ou sidebar) não encontrados.");
         }
         // --- FIM DA MUDANÇA ---
 
@@ -129,10 +142,22 @@
         async function fetchAndRenderUsers() {
             userListDiv.innerHTML = '<p>Carregando...</p>';
             try {
-                const response = await fetch('/api/users');
+                // MUDANÇA AQUI: Pega o token para a requisição autenticada
+                const token = localStorage.getItem('token'); 
+                const response = await fetch('/api/users', {
+                    headers: {
+                        'Authorization': `Bearer ${token}` // ADICIONA O CABEÇALHO DE AUTORIZAÇÃO
+                    }
+                });
+                // TRATAMENTO DO ERRO 401/403:
+                if (response.status === 401 || response.status === 403) {
+                    console.error("Não autorizado ao buscar usuários. Redirecionando para login.");
+                    logoutUser(); 
+                    return; 
+                }
                 const users = await response.json();
                 userListDiv.innerHTML = '';
-                if (users.length === 0) {
+                if (!Array.isArray(users) || users.length === 0) { // VERIFICA SE É ARRAY
                     userListDiv.innerHTML = '<p>Nenhum usuário cadastrado.</p>';
                     return;
                 }
@@ -154,11 +179,22 @@
             const email = document.getElementById('email').value;
             const senha = document.getElementById('senha').value;
             try {
+                // MUDANÇA AQUI: Pega o token para a requisição autenticada
+                const token = localStorage.getItem('token'); 
                 const response = await fetch('/api/users', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}` // ADICIONA O CABEÇALHO DE AUTORIZAÇÃO
+                    },
                     body: JSON.stringify({ nome, email, senha })
                 });
+                // TRATAMENTO DO ERRO 401/403:
+                if (response.status === 401 || response.status === 403) {
+                    console.error("Não autorizado ao adicionar usuário. Redirecionando para login.");
+                    logoutUser(); 
+                    return; 
+                }
                 const result = await response.json();
                 displayStatus(formStatus, result.message, !response.ok);
                 if (response.ok) {
@@ -179,7 +215,20 @@
             if (target.classList.contains('icon-delete')) {
                 if (confirm('Tem certeza que deseja excluir este usuário?')) {
                     try {
-                        const response = await fetch(`/api/users/${id}`, { method: 'DELETE' });
+                        // MUDANÇA AQUI: Pega o token para a requisição autenticada
+                        const token = localStorage.getItem('token'); 
+                        const response = await fetch(`/api/users/${id}`, { 
+                            method: 'DELETE',
+                            headers: { 
+                                'Authorization': `Bearer ${token}` // ADICIONA O CABEÇALHO DE AUTORIZAÇÃO
+                            }
+                        });
+                        // TRATAMENTO DO ERRO 401/403:
+                        if (response.status === 401 || response.status === 403) {
+                            console.error("Não autorizado ao excluir usuário. Redirecionando para login.");
+                            logoutUser(); 
+                            return; 
+                        }
                         const result = await response.json();
                         alert(result.message);
                         if (response.ok) fetchAndRenderUsers();
@@ -191,7 +240,19 @@
             }
             if (target.classList.contains('icon-edit')) {
                 try {
-                    const response = await fetch(`/api/users/${id}`);
+                    // MUDANÇA AQUI: Pega o token para a requisição autenticada
+                    const token = localStorage.getItem('token'); 
+                    const response = await fetch(`/api/users/${id}`, {
+                        headers: { 
+                            'Authorization': `Bearer ${token}` // ADICIONA O CABEÇALHO DE AUTORIZAÇÃO
+                        }
+                    });
+                    // TRATAMENTO DO ERRO 401/403:
+                    if (response.status === 401 || response.status === 403) {
+                        console.error("Não autorizado ao buscar dados do usuário para edição. Redirecionando para login.");
+                        logoutUser(); 
+                        return; 
+                    }
                     const user = await response.json();
                     if(response.ok) {
                         document.getElementById('editUserId').value = user._id;
@@ -212,11 +273,22 @@
             const nome = document.getElementById('editNome').value;
             const email = document.getElementById('editEmail').value;
             try {
+                // MUDANÇA AQUI: Pega o token para a requisição autenticada
+                const token = localStorage.getItem('token'); 
                 const response = await fetch(`/api/users/${id}`, {
                     method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}` // ADICIONA O CABEÇALHO DE AUTORIZAÇÃO
+                    },
                     body: JSON.stringify({ nome, email })
                 });
+                // TRATAMENTO DO ERRO 401/403:
+                if (response.status === 401 || response.status === 403) {
+                    console.error("Não autorizado ao salvar edição de usuário. Redirecionando para login.");
+                    logoutUser(); 
+                    return; 
+                }
                 const result = await response.json();
                 displayStatus(editFormStatus, result.message, !response.ok);
                 if(response.ok) {
@@ -236,27 +308,21 @@
 
         // --- INÍCIO DA LÓGICA DE INATIVIDADE ---
         const INACTIVITY_TIME = 10 * 60 * 1000; // 10 minutos em milissegundos
-        // Se você quer 10 segundos para teste: const INACTIVITY_TIME = 10 * 1000; // 10 segundos
         let timeoutId;
 
         function startInactivityTimer() {
-            // Limpa qualquer temporizador anterior
             clearTimeout(timeoutId);
-            // Define um novo temporizador
             timeoutId = setTimeout(logoutUser, INACTIVITY_TIME);
         }
 
         function resetInactivityTimer() {
-            // Chama startInactivityTimer apenas se o usuário estiver logado
-            if (localStorage.getItem('token')) { // Verifica se há um token (indicando que está logado)
+            if (localStorage.getItem('token')) {
                 startInactivityTimer();
             }
         }
 
-        // Inicia o temporizador quando a página carrega
-        resetInactivityTimer();
+        resetInactivityTimer(); // Inicia o temporizador quando a página carrega
 
-        // Monitora eventos de atividade do usuário
         document.addEventListener('mousemove', resetInactivityTimer);
         document.addEventListener('keypress', resetInactivityTimer);
         document.addEventListener('click', resetInactivityTimer);

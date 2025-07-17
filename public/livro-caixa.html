@@ -69,10 +69,8 @@
     <script src="/js/main.js"></script>
     <script>
     document.addEventListener('DOMContentLoaded', () => {
-        // --- INÍCIO DA MUDANÇA: Lógica para carregar o nome da empresa ---
+        // --- Lógica para carregar o nome da empresa ---
         const companyName = localStorage.getItem('companyName');
-        // Elementos HTML para atualizar
-        // const pageTitleSpan = document.getElementById('pageTitleCompanyName'); // REMOVIDO/COMENTADO
         const sidebarCompanyNameElement = document.getElementById('sidebarCompanyName');
 
         if (companyName) {
@@ -88,6 +86,21 @@
             // Opcional: Redirecionar para o login se o nome da empresa não for encontrado
             // console.warn('Nome da empresa não encontrado no localStorage. Redirecionando para login.');
             // window.location.href = '/index.html'; 
+        }
+        // --- FIM DA MUDANÇA ---
+
+        // --- Lógica do menu hambúrguer diretamente no livro-caixa.html ---
+        const menuToggle = document.getElementById('menuToggle');
+        const sidebar = document.getElementById('sidebar');
+
+        if (menuToggle && sidebar) {
+            console.log("livro-caixa.html: Menu hambúrguer e sidebar encontrados. Adicionando listener.");
+            menuToggle.addEventListener('click', () => {
+                sidebar.classList.toggle('active');
+                console.log("livro-caixa.html: Menu hambúrguer clicado. Sidebar toggled.");
+            });
+        } else {
+            console.warn("livro-caixa.html: Elementos do menu hambúrguer (menuToggle ou sidebar) não encontrados.");
         }
         // --- FIM DA MUDANÇA ---
 
@@ -118,10 +131,22 @@
             historyListDiv.innerHTML = '<p>Carregando histórico...</p>';
             const url = `/api/transacoes?mes=${mesAtual + 1}&ano=${anoAtual}`;
             try {
-                const response = await fetch(url);
+                // MUDANÇA AQUI: Pega o token para a requisição autenticada
+                const token = localStorage.getItem('token'); 
+                const response = await fetch(url, {
+                    headers: {
+                        'Authorization': `Bearer ${token}` // ADICIONA O CABEÇALHO DE AUTORIZAÇÃO
+                    }
+                });
+                // TRATAMENTO DO ERRO 401/403:
+                if (response.status === 401 || response.status === 403) {
+                    console.error("Não autorizado ao buscar histórico. Redirecionando para login.");
+                    logoutUser(); 
+                    return; 
+                }
                 const transacoes = await response.json();
                 historyListDiv.innerHTML = '';
-                if (transacoes.length === 0) {
+                if (!Array.isArray(transacoes) || transacoes.length === 0) { // VERIFICA SE É ARRAY
                     historyListDiv.innerHTML = `<p>Nenhuma transação encontrada para ${currentMonthDisplay.textContent}.</p>`;
                     return;
                 }
@@ -144,7 +169,19 @@
         async function fetchAndRenderSummary() {
             const url = `/api/transacoes/summary?mes=${mesAtual + 1}&ano=${anoAtual}`;
             try {
-                const response = await fetch(url);
+                // MUDANÇA AQUI: Pega o token para a requisição autenticada
+                const token = localStorage.getItem('token'); 
+                const response = await fetch(url, {
+                    headers: {
+                        'Authorization': `Bearer ${token}` // ADICIONA O CABEÇALHO DE AUTORIZAÇÃO
+                    }
+                });
+                // TRATAMENTO DO ERRO 401/403:
+                if (response.status === 401 || response.status === 403) {
+                    console.error("Não autorizado ao buscar resumo. Redirecionando para login.");
+                    logoutUser(); 
+                    return; 
+                }
                 const totais = await response.json();
                 const receitas = totais.totalReceitas || 0;
                 const despesas = totais.totalDespesas || 0;
@@ -186,7 +223,22 @@
             };
 
             try {
-                const response = await fetch('/api/transacoes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                // MUDANÇA AQUI: Pega o token para a requisição autenticada
+                const token = localStorage.getItem('token'); 
+                const response = await fetch('/api/transacoes', { 
+                    method: 'POST', 
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}` // ADICIONA O CABEÇALHO DE AUTORIZAÇÃO
+                    }, 
+                    body: JSON.stringify(payload) 
+                });
+                // TRATAMENTO DO ERRO 401/403:
+                if (response.status === 401 || response.status === 403) {
+                    console.error("Não autorizado ao salvar transação. Redirecionando para login.");
+                    logoutUser(); 
+                    return; 
+                }
                 if (response.ok) {
                     transacaoForm.reset();
                     dataInput.valueAsDate = new Date();
@@ -206,7 +258,20 @@
                 const transacaoId = e.target.dataset.id;
                 if (confirm('Tem certeza de que deseja excluir esta transação?')) {
                     try {
-                        const response = await fetch(`/api/transacoes/${transacaoId}`, { method: 'DELETE' });
+                        // MUDANÇA AQUI: Pega o token para a requisição autenticada
+                        const token = localStorage.getItem('token'); 
+                        const response = await fetch(`/api/transacoes/${transacaoId}`, { 
+                            method: 'DELETE',
+                            headers: { 
+                                'Authorization': `Bearer ${token}` // ADICIONA O CABEÇALHO DE AUTORIZAÇÃO
+                            }
+                        });
+                        // TRATAMENTO DO ERRO 401/403:
+                        if (response.status === 401 || response.status === 403) {
+                            console.error("Não autorizado ao excluir transação. Redirecionando para login.");
+                            logoutUser(); 
+                            return; 
+                        }
                         const result = await response.json();
                         alert(result.message);
                         if (response.ok) updateAll();

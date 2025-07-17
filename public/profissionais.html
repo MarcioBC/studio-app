@@ -14,7 +14,7 @@
             <h2 id="sidebarCompanyName"></h2>
             <nav>
                 <ul>
-                    <li><a href="/dashboard.html" class="active">Dashboard</a></li>
+                    <li><a href="/dashboard.html">Dashboard</a></li>
                     <li><a href="/clientes.html">Clientes</a></li>
                     <li><a href="/agendamentos.html">Agendamentos</a></li>
                     <li><a href="/profissionais.html">Gerenciar profissionais</a></li> 
@@ -57,10 +57,8 @@
     <script src="/js/main.js"></script>
     <script>
     document.addEventListener('DOMContentLoaded', () => {
-        // --- INÍCIO DA MUDANÇA: Lógica para carregar o nome da empresa ---
+        // --- Lógica para carregar o nome da empresa ---
         const companyName = localStorage.getItem('companyName');
-        // Elementos HTML para atualizar
-        // const pageTitleSpan = document.getElementById('pageTitleCompanyName'); // REMOVIDO/COMENTADO
         const sidebarCompanyNameElement = document.getElementById('sidebarCompanyName');
 
         if (companyName) {
@@ -79,6 +77,21 @@
         }
         // --- FIM DA MUDANÇA ---
 
+        // --- Lógica do menu hambúrguer diretamente no profissionais.html ---
+        const menuToggle = document.getElementById('menuToggle');
+        const sidebar = document.getElementById('sidebar');
+
+        if (menuToggle && sidebar) {
+            console.log("profissionais.html: Menu hambúrguer e sidebar encontrados. Adicionando listener.");
+            menuToggle.addEventListener('click', () => {
+                sidebar.classList.toggle('active');
+                console.log("profissionais.html: Menu hambúrguer clicado. Sidebar toggled.");
+            });
+        } else {
+            console.warn("profissionais.html: Elementos do menu hambúrguer (menuToggle ou sidebar) não encontrados.");
+        }
+        // --- FIM DA MUDANÇA ---
+
         const profissionalForm = document.getElementById('profissionalForm');
         const nomeInput = document.getElementById('nomeProfissional');
         const profissionaisListDiv = document.getElementById('profissionaisList');
@@ -86,10 +99,22 @@
         async function fetchAndRenderProfissionais() {
             profissionaisListDiv.innerHTML = '<p>Carregando...</p>';
             try {
-                const response = await fetch('/api/profissionais');
+                // MUDANÇA AQUI: Pega o token para a requisição autenticada
+                const token = localStorage.getItem('token'); 
+                const response = await fetch('/api/profissionais', {
+                    headers: {
+                        'Authorization': `Bearer ${token}` // ADICIONA O CABEÇALHO DE AUTORIZAÇÃO
+                    }
+                });
+                // TRATAMENTO DO ERRO 401/403:
+                if (response.status === 401 || response.status === 403) {
+                    console.error("Não autorizado ao buscar profissionais. Redirecionando para login.");
+                    logoutUser(); 
+                    return; 
+                }
                 const profissionais = await response.json();
                 profissionaisListDiv.innerHTML = '';
-                if (profissionais.length === 0) {
+                if (!Array.isArray(profissionais) || profissionais.length === 0) { // VERIFICA SE É ARRAY
                     profissionaisListDiv.innerHTML = '<p>Nenhum profissional cadastrado.</p>';
                     return;
                 }
@@ -115,11 +140,22 @@
             const nome = nomeInput.value.trim();
             if (!nome) return;
             try {
+                // MUDANÇA AQUI: Pega o token para a requisição autenticada
+                const token = localStorage.getItem('token'); 
                 const response = await fetch('/api/profissionais', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}` // ADICIONA O CABEÇALHO DE AUTORIZAÇÃO
+                    },
                     body: JSON.stringify({ nome })
                 });
+                // TRATAMENTO DO ERRO 401/403:
+                if (response.status === 401 || response.status === 403) {
+                    console.error("Não autorizado ao adicionar profissional. Redirecionando para login.");
+                    logoutUser(); 
+                    return; 
+                }
                 const result = await response.json();
                 alert(result.message);
                 if (response.ok) {
@@ -137,7 +173,20 @@
                 const id = e.target.dataset.id;
                 if (confirm('Tem certeza que deseja excluir este profissional?')) {
                     try {
-                        const response = await fetch(`/api/profissionais/${id}`, { method: 'DELETE' });
+                        // MUDANÇA AQUI: Pega o token para a requisição autenticada
+                        const token = localStorage.getItem('token'); 
+                        const response = await fetch(`/api/profissionais/${id}`, { 
+                            method: 'DELETE',
+                            headers: { 
+                                'Authorization': `Bearer ${token}` // ADICIONA O CABEÇALHO DE AUTORIZAÇÃO
+                            }
+                        });
+                        // TRATAMENTO DO ERRO 401/403:
+                        if (response.status === 401 || response.status === 403) {
+                            console.error("Não autorizado ao excluir profissional. Redirecionando para login.");
+                            logoutUser(); 
+                            return; 
+                        }
                         const result = await response.json();
                         alert(result.message);
                         if (response.ok) {
@@ -155,27 +204,21 @@
 
         // --- INÍCIO DA LÓGICA DE INATIVIDADE ---
         const INACTIVITY_TIME = 10 * 60 * 1000; // 10 minutos em milissegundos
-        // Se você quer 10 segundos para teste: const INACTIVITY_TIME = 10 * 1000; // 10 segundos
         let timeoutId;
 
         function startInactivityTimer() {
-            // Limpa qualquer temporizador anterior
             clearTimeout(timeoutId);
-            // Define um novo temporizador
             timeoutId = setTimeout(logoutUser, INACTIVITY_TIME);
         }
 
         function resetInactivityTimer() {
-            // Chama startInactivityTimer apenas se o usuário estiver logado
-            if (localStorage.getItem('token')) { // Verifica se há um token (indicando que está logado)
+            if (localStorage.getItem('token')) {
                 startInactivityTimer();
             }
         }
 
-        // Inicia o temporizador quando a página carrega
-        resetInactivityTimer();
+        resetInactivityTimer(); // Inicia o temporizador quando a página carrega
 
-        // Monitora eventos de atividade do usuário
         document.addEventListener('mousemove', resetInactivityTimer);
         document.addEventListener('keypress', resetInactivityTimer);
         document.addEventListener('click', resetInactivityTimer);

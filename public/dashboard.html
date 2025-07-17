@@ -70,7 +70,6 @@
             console.log("Dashboard: companyName lido do localStorage:", companyName); // DEBUG
 
             // Elementos HTML para atualizar
-            // Removido 'pageTitleSpan' pois document.title é atualizado diretamente
             const sidebarCompanyNameElement = document.getElementById('sidebarCompanyName');
             const dashboardHeaderCompanyNameElement = document.getElementById('dashboardHeaderCompanyName');
 
@@ -81,21 +80,17 @@
 
             if (companyName) {
                 console.log("Dashboard: companyName encontrado no localStorage. Atualizando elementos UI."); // DEBUG
-                // ATUALIZA O TÍTULO DA ABA DO NAVEGADOR DIRETAMENTE
                 document.title = `${companyName} - Dashboard`; 
-                
-                // Atualiza o nome na barra lateral
+
                 if (sidebarCompanyNameElement) {
                     sidebarCompanyNameElement.textContent = companyName;
                 }
-                // Atualiza o nome no cabeçalho do dashboard
                 if (dashboardHeaderCompanyNameElement) {
                     dashboardHeaderCompanyNameElement.textContent = companyName;
                 }
             } else {
                 console.warn("Dashboard: companyName NÃO encontrado no localStorage. O nome padrão 'Studio Je Marqui' será usado."); // DEBUG
-                // Se o nome não for encontrado, defina um nome padrão para a UI
-                document.title = "Studio Je Marqui - Dashboard"; // Define título padrão
+                document.title = "Studio Je Marqui - Dashboard";
                 if (sidebarCompanyNameElement) {
                     sidebarCompanyNameElement.textContent = "Studio Je Marqui";
                 }
@@ -112,7 +107,18 @@
 
             async function fetchDashboardSummary() {
                 try {
-                    const response = await fetch('/api/agendamentos/summary/dashboard');
+                    const token = localStorage.getItem('token'); // <--- PEGA O TOKEN AQUI
+                    const response = await fetch('/api/agendamentos/summary/dashboard', {
+                        headers: {
+                            'Authorization': `Bearer ${token}` // <--- ADICIONA O CABEÇALHO DE AUTORIZAÇÃO
+                        }
+                    });
+                    // TRATAMENTO DO ERRO 401/403:
+                    if (response.status === 401 || response.status === 403) {
+                        console.error("Não autorizado ao buscar resumo. Redirecionando para login.");
+                        logoutUser(); // Chama a função de logout (limpa localStorage e redireciona)
+                        return; // Interrompe a execução
+                    }
                     const summary = await response.json();
                     document.getElementById('totalHoje').textContent = summary.hoje || 0;
                     document.getElementById('totalSemana').textContent = summary.semana || 0;
@@ -127,10 +133,21 @@
                 const hojeListDiv = document.getElementById('hojeList');
                 hojeListDiv.innerHTML = '<p>Carregando agendamentos de hoje...</p>';
                 try {
-                    const response = await fetch('/api/agendamentos/hoje');
-                    const agendamentos = await response.json();
+                    const token = localStorage.getItem('token'); // <--- PEGA O TOKEN AQUI
+                    const response = await fetch('/api/agendamentos/hoje', {
+                        headers: {
+                            'Authorization': `Bearer ${token}` // <--- ADICIONA O CABEÇALHO DE AUTORIZAÇÃO
+                        }
+                    });
+                    // TRATAMENTO DO ERRO 401/403:
+                    if (response.status === 401 || response.status === 403) {
+                        console.error("Não autorizado ao buscar agendamentos de hoje. Redirecionando para login.");
+                        logoutUser(); // Chama a função de logout (limpa localStorage e redireciona)
+                        return; // Interrompe a execução
+                    }
+                    const agendamentos = await response.json(); // Se não for 401/403, espera que seja JSON válido
                     hojeListDiv.innerHTML = '';
-                    if (agendamentos.length === 0) {
+                    if (!Array.isArray(agendamentos) || agendamentos.length === 0) { // VERIFICA SE É ARRAY
                         hojeListDiv.innerHTML = '<p>Nenhum agendamento para hoje.</p>';
                         return;
                     }
@@ -191,7 +208,7 @@
         document.addEventListener('scroll', resetInactivityTimer);
         // --- FIM DA LÓGICA DE INATIVIDADE ---
     });
-        
+
          </script>
 </body>
 </html>
