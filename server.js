@@ -11,7 +11,7 @@ const app = express();
 
 // --- CRÍTICO: CONFIGURAÇÃO DO CORS DEVE SER UMA DAS PRIMEIRAS COISAS ---
 app.use(cors({
-    origin: '*', // <--- TEMPORARIAMENTE ABERTO PARA QUALQUER ORIGEM (PARA DEPURACAO)
+    origin: 'https://studio-app-j198.onrender.com', //
     credentials: true
 }));
 // --- FIM DA ADIÇÃO DO CORS ---
