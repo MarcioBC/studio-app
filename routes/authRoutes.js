@@ -2,81 +2,114 @@
 
 const express = require('express');
 const router = express.Router();
-const User = require('../models/User.js');
-const Company = require('../models/Company.js'); // Precisamos do modelo da Empresa
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const User = require('../models/User.js');
+const Company = require('../models/Company.js'); // Importe o modelo Company
 
 // ROTA DE REGISTRO SEGURA (VALIDA O PIN DA EMPRESA)
 router.post('/register', async (req, res) => {
-    // --- ADICIONADO PARA DEBUG ---
-    console.log("Recebendo requisição de registro. Body:", req.body);
-    const { nome, email, senha, pinCadastro } = req.body;
-    console.log("PIN de Cadastro recebido:", pinCadastro);
-    // --- FIM DO DEBUG ---
-
     try {
-        // 1. Encontra a empresa que possui o PIN fornecido
-        const company = await Company.findOne({ pinCadastro: pinCadastro });
-        if (!company) {
-            console.log("Empresa não encontrada para o PIN:", pinCadastro); // ADICIONADO PARA DEBUG
-            return res.status(403).json({ message: 'PIN de Cadastro inválido ou não encontrado.' });
-        }
+        const { nome, email, senha, pinCadastro } = req.body;
 
-        // 2. Verifica se o e-mail do usuário já existe no sistema
+        // 1. Verifica se o e-mail já existe no sistema (globalmente, para evitar duplicação de login)
         const userExists = await User.findOne({ email });
         if (userExists) {
             return res.status(409).json({ message: 'Este e-mail já está em uso.' });
         }
 
-        // 3. Se tudo estiver correto, cria o novo usuário
+        // 2. Encontra a empresa que possui o PIN fornecido
+        const company = await Company.findOne({ pinCadastro: pinCadastro });
+        if (!company) {
+            console.log(`Empresa não encontrada para o PIN: ${pinCadastro}`);
+            return res.status(403).json({ message: 'PIN de cadastro inválido.' });
+        }
+
+        // 3. Hash da senha
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(senha, salt);
+
+        // 4. Se tudo estiver correto, cria o novo usuário
         const user = await User.create({
             nome,
             email,
-            senha,
-            companyId: company._id, // Associa o usuário à empresa encontrada
-            role: 'profissional' // Define novos usuários com a role padrão
+            senha: hashedPassword,
+            companyId: company._id, // Associa o usuário ao ID da empresa encontrada
+            role: 'profissional' // Define o papel padrão como 'profissional'
         });
 
-        res.status(201).json({ message: 'Usuário registrado com sucesso!' });
+        // 5. Gera o token JWT (este token será usado para o usuário recém-registrado)
+        const token = jwt.sign({ id: user._id, companyId: user.companyId, role: user.role }, process.env.JWT_SECRET, {
+            expiresIn: '1h',
+        });
+
+        // Retorna a resposta completa, incluindo o token e o nome da empresa
+        res.status(201).json({
+            message: 'Usuário registrado com sucesso!',
+            token, // Retorna o token
+            user: { // Retorna o objeto user completo
+                id: user._id,
+                nome: user.nome,
+                email: user.email,
+                companyId: user.companyId,
+                role: user.role,
+                companyName: company.name // Retorna o nome da empresa
+            }
+        });
 
     } catch (error) {
-        console.error("Erro no registro de usuário:", error);
-        res.status(500).json({ message: 'Erro interno do servidor.' });
+        console.error("Erro no registro:", error);
+        res.status(500).json({ message: 'Erro no servidor ao registrar usuário.' });
     }
 });
 
-// ROTA DE LOGIN (permanece a mesma)
+// ROTA DE LOGIN
 router.post('/login', async (req, res) => {
     try {
         const { email, senha } = req.body;
+
+        // 1. Verifica se o usuário existe
         const user = await User.findOne({ email });
         if (!user) {
-            return res.status(401).json({ message: 'E-mail ou senha inválidos.' });
+            return res.status(400).json({ message: 'Credenciais inválidas.' });
         }
+
+        // 2. Compara a senha fornecida com a senha hash no banco de dados
         const isMatch = await bcrypt.compare(senha, user.senha);
         if (!isMatch) {
-            return res.status(401).json({ message: 'E-mail ou senha inválidos.' });
+            return res.status(400).json({ message: 'Credenciais inválidas.' });
         }
 
-        const tokenPayload = {
-            id: user._id,
-            nome: user.nome,
-            companyId: user.companyId
-        };
+        // 3. Busca o nome da empresa usando o companyId do usuário
+        const company = await Company.findById(user.companyId);
+        if (!company) {
+            // Isso não deveria acontecer se o registro foi bem-sucedido e o companyId existe
+            return res.status(500).json({ message: 'Empresa associada ao usuário não encontrada.' });
+        }
 
-        const token = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: '1d' });
-        res.cookie('token', token, { httpOnly: true, secure: process.env.NODE_ENV === 'production' });
-        res.status(200).json({ message: 'Login realizado com sucesso!' });
+        // 4. Gera o token JWT
+        const token = jwt.sign({ id: user._id, companyId: user.companyId, role: user.role }, process.env.JWT_SECRET, {
+            expiresIn: '1h',
+        });
+
+        // --- AQUI ESTÁ A CHAVE: RETORNAR TODOS OS DADOS NECESSÁRIOS NO JSON ---
+        res.status(200).json({
+            message: 'Login bem-sucedido!',
+            token, // <--- O TOKEN DEVE SER RETORNADO
+            user: { // <--- O OBJETO 'user' DEVE SER RETORNADO COM TODOS OS DADOS
+                id: user._id,
+                nome: user.nome,
+                email: user.email,
+                companyId: user.companyId,
+                role: user.role,
+                companyName: company.name // <--- O NOME DA EMPRESA DEVE SER RETORNADO AQUI
+            }
+        });
+
     } catch (error) {
-        res.status(500).json({ message: 'Erro no servidor.' });
+        console.error("Erro no login:", error);
+        res.status(500).json({ message: 'Erro no servidor ao fazer login.' });
     }
-});
-
-// Rota de Logout
-router.get('/logout', (req, res) => {
-    res.cookie('token', '', { httpOnly: true, expires: new Date(0) });
-    res.redirect('/index.html');
 });
 
 module.exports = router;
