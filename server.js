@@ -46,7 +46,7 @@ const { protect } = require('./middleware/authMiddleware');
 const clienteRoutes = require('./routes/clienteRoutes'); 
 const agendamentoRoutes = require('./routes/agendamentoRoutes');
 const transacaoRoutes = require('./routes/transacaoRoutes');
-const profissionalRoutes = require('./routes/profissionaisRoutes'); // Certifique-se que o nome do arquivo é correto
+const profissionalRoutes = require('./routes/profissionalRoutes'); // <-- CORRIGIDO AQUI!
 const userRoutes = require('./routes/userRoutes');
 
 // --- ROTAS PÚBLICAS (NÃO PRECISAM DE LOGIN NEM DE 'protect') ---
