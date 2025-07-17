@@ -3,15 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard</title>
+    <title>Dashboard</title> 
     <link rel="stylesheet" href="/css/global.css">
+    <link rel="stylesheet" href="/css/clientes.css">
+    <link rel="stylesheet" href="/css/agendamentos.css">
     <link rel="stylesheet" href="/css/dashboard.css">
 </head>
 <body>
     <button class="menu-toggle" id="menuToggle">☰</button>
     <div class="dashboard-container">
         <aside class="sidebar" id="sidebar">
-            <h2 id="sidebarCompanyName"></h2>
+            <h2 id="sidebarCompanyName"></h2> 
             <nav>
                 <ul>
                     <li><a href="/dashboard.html" class="active">Dashboard</a></li>
@@ -19,41 +21,41 @@
                     <li><a href="/agendamentos.html">Agendamentos</a></li>
                     <li><a href="/livro-caixa.html">Livro Caixa</a></li>
                     <li><a href="/relatorios.html">Relatórios</a></li>
-                    <li><a href="/profissionais.html">Gerenciar Profissionais</a></li>
+                    <li><a href="/profissionais.html">Gerenciar profissionais</a></li> 
                     <li><a href="/gerenciar-usuarios.html">Gerenciar Usuários</a></li>
-                    <li style="margin-top: auto;"><a href="/api/auth/logout" style="color: #ffc107;">Sair</a></li>
+                    <li style="margin-top: auto;"><a href="/api/auth/logout" style="color: #ffc107;">Sair</a></li> 
                 </ul>
             </nav>
         </aside>
 
         <main class="main-content">
             <header class="header">
-                <h1>Bem-vindo(a) ao seu Dashboard!</h1>
+                <h1>Bem-vindo(a) ao Dashboard!</h1>
             </header>
 
-            <section class="summary-cards">
-                <div class="card">
-                    <h3>Total de Clientes</h3>
-                    <p id="totalClientes">0</p>
+            <section class="dashboard-cards">
+                <div class="dashboard-card card-hoje">
+                    <h3>Agendamentos de Hoje</h3>
+                    <p class="count" id="agendamentosHojeCount">0</p>
                 </div>
-                <div class="card">
-                    <h3>Agendamentos Hoje</h3>
-                    <p id="agendamentosHoje">0</p>
+                <div class="dashboard-card card-semana">
+                    <h3>Agendamentos da Semana</h3>
+                    <p class="count" id="agendamentosSemanaCount">0</p>
                 </div>
-                <div class="card">
-                    <h3>Próximo Agendamento</h3>
-                    <p id="proximoAgendamento">Nenhum</p>
+                <div class="dashboard-card card-confirmados">
+                    <h3>Agendamentos Confirmados</h3>
+                    <p class="count" id="agendamentosConfirmadosCount">0</p>
                 </div>
-                <div class="card">
-                    <h3>Receita do Mês</h3>
-                    <p id="receitaMes">R$ 0,00</p>
+                <div class="dashboard-card card-concluidos">
+                    <h3>Agendamentos Concluídos</h3>
+                    <p class="count" id="agendamentosConcluidosCount">0</p>
                 </div>
             </section>
 
             <section class="recent-activity">
-                <h2>Atividade Recente</h2>
-                <div id="recentActivityList">
-                    <p>Carregando atividades...</p>
+                <h2>Listagem dos Agendamentos do Dia</h2>
+                <div id="agendamentosDoDiaList">
+                    <p>Carregando agendamentos...</p>
                 </div>
             </section>
         </main>
@@ -61,32 +63,12 @@
 
     <script src="/js/main.js"></script>
     <script>
-    // --- INÍCIO DA LÓGICA DE INATIVIDADE ---
-    const INACTIVITY_TIME = 10 * 60 * 1000; // 10 minutos em milissegundos
-    let timeoutId;
-
-    function startInactivityTimer() {
-        clearTimeout(timeoutId);
-        timeoutId = setTimeout(logoutUser, INACTIVITY_TIME);
-        console.log("dashboard.html: Timer de inatividade iniciado/reiniciado."); // DEBUG
-    }
-
-    function resetInactivityTimer() {
-        if (localStorage.getItem('token')) {
-            startInactivityTimer();
-        } else {
-            console.log("dashboard.html: Não resetando timer: usuário não logado."); // DEBUG
-        }
-    }
-    // --- FIM DA LÓGICA DE INATIVIDADE ---
-
     document.addEventListener('DOMContentLoaded', () => {
-        // --- Lógica para carregar o nome da empresa ---
+        // --- Lógica para carregar o nome da empresa dinamicamente ---
         const companyName = localStorage.getItem('companyName');
         const sidebarCompanyNameElement = document.getElementById('sidebarCompanyName');
-
         if (companyName) {
-            document.title = `${companyName} - Dashboard`;
+            document.title = `${companyName} - Dashboard`; // Atualiza o título da página
             if (sidebarCompanyNameElement) {
                 sidebarCompanyNameElement.textContent = companyName;
             }
@@ -95,14 +77,10 @@
             if (sidebarCompanyNameElement) {
                 sidebarCompanyNameElement.textContent = "Studio Je Marqui";
             }
-            // Se o nome da empresa não for encontrado, e não houver token,
-            // o main.js já deve ter redirecionado.
-            // Se houver token mas não companyName, pode ser um caso de erro,
-            // mas o mais importante é o token.
         }
-        // --- FIM DA MUDANÇA ---
+        // --- FIM DA LÓGICA DE NOME DA EMPRESA ---
 
-        // --- Lógica do menu hambúrguer ---
+        // --- Lógica do menu hambúrguer diretamente no dashboard.html ---
         const menuToggle = document.getElementById('menuToggle');
         const sidebar = document.getElementById('sidebar');
 
@@ -115,25 +93,36 @@
         } else {
             console.warn("dashboard.html: Elementos do menu hambúrguer (menuToggle ou sidebar) não encontrados.");
         }
-        // --- FIM DA MUDANÇA ---
+        // --- FIM DA LÓGICA DO MENU HAMBÚRGUER ---
 
-        const totalClientesEl = document.getElementById('totalClientes');
-        const agendamentosHojeEl = document.getElementById('agendamentosHoje');
-        const proximoAgendamentoEl = document.getElementById('proximoAgendamento');
-        const receitaMesEl = document.getElementById('receitaMes');
-        const recentActivityList = document.getElementById('recentActivityList');
 
-        // Função para buscar dados do dashboard
+        // --- Elementos para popular os dados dos cards ---
+        const agendamentosHojeCountEl = document.getElementById('agendamentosHojeCount');
+        const agendamentosSemanaCountEl = document.getElementById('agendamentosSemanaCount');
+        const agendamentosConfirmadosCountEl = document.getElementById('agendamentosConfirmadosCount');
+        const agendamentosConcluidosCountEl = document.getElementById('agendamentosConcluidosCount');
+        const agendamentosDoDiaListEl = document.getElementById('agendamentosDoDiaList');
+
+
+        // --- Função para buscar dados do Dashboard ---
         async function fetchDashboardData() {
-            console.log("dashboard.html: Buscando dados do dashboard..."); // DEBUG
+            console.log("dashboard.html: Buscando dados do dashboard...");
             const token = localStorage.getItem('token');
+            console.log("dashboard.html: Token lido do localStorage para requisicao:", token ? "Token presente" : "Token ausente");
+            
             if (!token) {
-                console.error("dashboard.html: Token não encontrado ao buscar dados do dashboard."); // DEBUG
-                logoutUser();
+                console.error("dashboard.html: Token não encontrado ao buscar dados do dashboard.");
+                if (typeof logoutUser === 'function') {
+                    logoutUser(); 
+                } else {
+                    console.error("Função logoutUser não encontrada. Redirecione manualmente.");
+                    window.location.href = '/index.html';
+                }
                 return;
             }
 
             try {
+                // Requisição para a rota /api/dashboard (que precisaremos ajustar no backend)
                 const response = await fetch('/api/dashboard', {
                     headers: {
                         'Authorization': `Bearer ${token}`
@@ -141,51 +130,75 @@
                 });
 
                 if (response.status === 401 || response.status === 403) {
-                    console.error("dashboard.html: Não autorizado ao buscar dados do dashboard. Redirecionando para login."); // DEBUG
-                    logoutUser();
+                    console.error("dashboard.html: Não autorizado ao buscar dados do dashboard. Redirecionando para login.");
+                    if (typeof logoutUser === 'function') logoutUser();
                     return;
                 }
 
                 const data = await response.json();
-                console.log("dashboard.html: Dados do dashboard recebidos:", data); // DEBUG
+                console.log("dashboard.html: Dados do dashboard recebidos:", data);
 
-                totalClientesEl.textContent = data.totalClientes || 0;
-                agendamentosHojeEl.textContent = data.agendamentosHoje || 0;
-                receitaMesEl.textContent = formatAsCurrency(data.receitaMes || 0);
-
-                if (data.proximoAgendamento) {
-                    const ag = data.proximoAgendamento;
-                    const dataAgendamentoObj = new Date(ag.dataAgendamento);
-                    const dataFormatada = dataAgendamentoObj.toLocaleDateString('pt-BR');
-                    const horaFormatada = dataAgendamentoObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-                    proximoAgendamentoEl.textContent = `${dataFormatada} às ${horaFormatada} - ${ag.cliente ? ag.cliente.nome : 'N/A'}`;
-                } else {
-                    proximoAgendamentoEl.textContent = 'Nenhum';
-                }
-
-                recentActivityList.innerHTML = '';
-                if (Array.isArray(data.recentActivity) && data.recentActivity.length > 0) {
-                    data.recentActivity.forEach(activity => {
+                // Popular os cards com os dados recebidos
+                agendamentosHojeCountEl.textContent = data.agendamentosHojeCount || 0;
+                agendamentosSemanaCountEl.textContent = data.agendamentosSemanaCount || 0;
+                agendamentosConfirmadosCountEl.textContent = data.agendamentosConfirmadosCount || 0;
+                agendamentosConcluidosCountEl.textContent = data.agendamentosConcluidosCount || 0;
+                
+                // --- Preenchimento da Listagem dos Agendamentos do Dia ---
+                agendamentosDoDiaListEl.innerHTML = ''; // Limpa o conteúdo anterior
+                if (Array.isArray(data.agendamentosDoDiaList) && data.agendamentosDoDiaList.length > 0) {
+                    data.agendamentosDoDiaList.forEach(ag => {
                         const item = document.createElement('div');
-                        item.className = 'activity-item';
-                        // MUDANÇA AQUI: Formatação da data no fuso horário local
-                        const activityDate = new Date(activity.timestamp).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-                        item.innerHTML = `<p>${activity.description}</p><small>${activityDate}</small>`;
-                        recentActivityList.appendChild(item);
+                        item.className = 'activity-item'; // Você pode querer uma classe diferente aqui
+                        const dataAgendamentoObj = new Date(ag.dataAgendamento);
+                        const dataFormatada = dataAgendamentoObj.toLocaleDateString('pt-BR');
+                        const horaFormatada = dataAgendamentoObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+                        item.innerHTML = `
+                            <p><strong>${ag.cliente ? ag.cliente.nome : 'Cliente Removido'}</strong></p>
+                            <p>${ag.procedimentos.map(p => p.nome).join(', ')}</p>
+                            <p>Data: ${dataFormatada} às ${horaFormatada}</p>
+                            <p>Status: ${ag.status}</p>
+                            <hr>
+                        `;
+                        agendamentosDoDiaListEl.appendChild(item);
                     });
                 } else {
-                    recentActivityList.innerHTML = '<p>Nenhuma atividade recente.</p>';
+                    agendamentosDoDiaListEl.innerHTML = '<p>Nenhum agendamento para hoje.</p>';
                 }
 
             } catch (error) {
-                console.error("dashboard.html: Erro ao buscar dados do dashboard:", error); // DEBUG
-                // Não chama logoutUser aqui, pois pode ser um erro de rede temporário
-                // ou outro problema que não exija deslogar o usuário.
-                // A inatividade cuidará do logout se a sessão realmente expirar.
+                console.error("dashboard.html: Erro ao buscar dados do dashboard:", error);
+                // Define um estado de erro para os cards
+                agendamentosHojeCountEl.textContent = 'Erro';
+                agendamentosSemanaCountEl.textContent = 'Erro';
+                agendamentosConfirmadosCountEl.textContent = 'Erro';
+                agendamentosConcluidosCountEl.textContent = 'Erro';
+                agendamentosDoDiaListEl.innerHTML = '<p style="color:red;">Erro ao carregar agendamentos.</p>';
             }
         }
 
-        // --- Inicialização e Event Listeners para o Timer de Inatividade ---
+        // Chama a função para buscar e popular os dados do dashboard
+        fetchDashboardData();
+
+        // --- Lógica do Temporizador de Inatividade (no final do DOMContentLoaded) ---
+        const INACTIVITY_TIME = 10 * 60 * 1000; // 10 minutos em milissegundos
+        let timeoutId;
+
+        function startInactivityTimer() {
+            clearTimeout(timeoutId);
+            timeoutId = setTimeout(logoutUser, INACTIVITY_TIME);
+            console.log("dashboard.html: Timer de inatividade iniciado/reiniciado.");
+        }
+
+        window.resetInactivityTimer = function() { // Torna global para main.js ou outros scripts
+            if (localStorage.getItem('token')) {
+                startInactivityTimer();
+            } else {
+                console.log("dashboard.html: Não resetando timer: usuário não logado.");
+            }
+        }
+
         resetInactivityTimer(); // Inicia o temporizador quando a página carrega
 
         document.addEventListener('mousemove', resetInactivityTimer);
@@ -193,8 +206,6 @@
         document.addEventListener('click', resetInactivityTimer);
         document.addEventListener('scroll', resetInactivityTimer);
         // --- FIM DA LÓGICA DE INATIVIDADE ---
-
-        fetchDashboardData();
     });
     </script>
 </body>

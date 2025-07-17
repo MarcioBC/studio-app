@@ -33,7 +33,7 @@ mongoose.connect(process.env.MONGODB_URI)
 
 // --- Importar Modelos (necessários para a nova rota /api/dashboard) ---
 const User = require('./models/User'); 
-const Agendamento = require('./models/Agendamento'); 
+const Agendamento = require('./('./models/Agendamento'); // Corrigido o caminho
 const Cliente = require('./models/Cliente'); 
 const Transacao = require('./models/Transacao'); 
 // --- Fim dos novos imports de Modelos ---
@@ -46,7 +46,7 @@ const { protect } = require('./middleware/authMiddleware');
 const clienteRoutes = require('./routes/clienteRoutes'); 
 const agendamentoRoutes = require('./routes/agendamentoRoutes');
 const transacaoRoutes = require('./routes/transacaoRoutes');
-const profissionalRoutes = require('./routes/profissionalRoutes'); // <-- CORRIGIDO AQUI!
+const profissionalRoutes = require('./routes/profissionalRoutes'); // Nome do arquivo é 'profissionalRoutes.js'
 const userRoutes = require('./routes/userRoutes');
 
 // --- ROTAS PÚBLICAS (NÃO PRECISAM DE LOGIN NEM DE 'protect') ---
@@ -57,97 +57,74 @@ app.get('/register.html', (req, res) => res.sendFile(path.join(__dirname, 'publi
 app.get('/register-company.html', (req, res) => res.sendFile(path.join(__dirname, 'public', 'register-company.html')));
 
 // --- ROTAS PROTEGIDAS (APLIQUE O 'protect' DIRETAMENTE AQUI) ---
-// Adicionando a rota /api/dashboard que estava faltando
-app.get('/api/dashboard', protect, async (req, res) => { //
+// Adicionando a rota /api/dashboard que fornecerá TODOS os dados para o Dashboard HTML
+app.get('/api/dashboard', protect, async (req, res) => {
     try {
         const companyId = req.user.companyId; 
 
         if (!companyId) {
-            console.error("Erro /api/dashboard: companyId não encontrado em req.user após protect."); //
-            return res.status(401).json({ message: "Não autorizado: companyId ausente." }); //
+            console.error("Erro /api/dashboard: companyId não encontrado em req.user após protect.");
+            return res.status(401).json({ message: "Não autorizado: companyId ausente." });
         }
 
-        const totalClientes = await Cliente.countDocuments({ companyId: companyId }); //
-
+        // --- DADOS PARA OS CARDS DO DASHBOARD ---
+        // Agendamentos de Hoje
         const hoje = new Date();
         hoje.setUTCHours(0, 0, 0, 0); 
         const amanha = new Date(hoje);
         amanha.setUTCDate(hoje.getUTCDate() + 1); 
-
-        const agendamentosHoje = await Agendamento.countDocuments({ //
+        const agendamentosHojeCount = await Agendamento.countDocuments({
             companyId: companyId,
             dataAgendamento: { $gte: hoje, $lt: amanha }
         });
 
-        const proximoAgendamento = await Agendamento.findOne({ //
+        // Agendamentos da Semana
+        const inicioSemana = new Date(hoje); // Começa com hoje 00:00 UTC
+        inicioSemana.setUTCDate(hoje.getUTCDate() - hoje.getUTCDay()); // Retrocede para o domingo (0 = domingo)
+        const fimSemana = new Date(inicioSemana);
+        fimSemana.setUTCDate(inicioSemana.getUTCDate() + 7); // Avança 7 dias para o próximo domingo 00:00 UTC
+        const agendamentosSemanaCount = await Agendamento.countDocuments({
             companyId: companyId,
-            dataAgendamento: { $gte: new Date() } 
-        }).populate('cliente', 'nome').sort({ dataAgendamento: 1 }).limit(1);
-
-        const inicioMes = new Date();
-        inicioMes.setUTCFullYear(inicioMes.getUTCFullYear());
-        inicioMes.setUTCMonth(inicioMes.getUTCMonth(), 1);
-        inicioMes.setUTCHours(0, 0, 0, 0);
-
-        const fimMes = new Date();
-        fimMes.setUTCFullYear(fimMes.getUTCFullYear());
-        fimMes.setUTCMonth(fimMes.getUTCMonth() + 1, 0); 
-        fimMes.setUTCHours(23, 59, 59, 999);
-
-        const receitaMesAgendamentos = await Agendamento.aggregate([ //
-            { $match: { 
-                companyId: companyId,
-                status: 'Concluído',
-                dataAgendamento: { $gte: inicioMes, $lte: fimMes }
-            }},
-            { $group: {
-                _id: null,
-                total: { $sum: "$valorTotal" }
-            }}
-        ]);
-
-        const receitaMesTransacoes = await Transacao.aggregate([ //
-            { $match: { 
-                companyId: companyId,
-                tipo: 'Receita',
-                data: { $gte: inicioMes, $lte: fimMes }
-            }},
-            { $group: {
-                _id: null,
-                total: { $sum: "$valor" }
-            }}
-        ]);
-        
-        const totalReceitaMes = (receitaMesAgendamentos.length > 0 ? receitaMesAgendamentos[0].total : 0) + 
-                              (receitaMesTransacoes.length > 0 ? receitaMesTransacoes[0].total : 0);
-
-        const recentActivity = await Agendamento.find({ companyId: companyId }) //
-            .populate('cliente', 'nome')
-            .sort({ updatedAt: -1 }) 
-            .limit(5)
-            .select('cliente procedimentos status dataAgendamento'); 
-
-        const formattedRecentActivity = recentActivity.map(ag => ({ //
-            description: `Agendamento de ${ag.cliente ? ag.cliente.nome : 'N/A'} - ${ag.procedimentos.map(p => p.nome).join(', ')} (${ag.status})`,
-            timestamp: ag.updatedAt 
-        }));
-
-        res.status(200).json({ //
-            totalClientes,
-            agendamentosHoje,
-            proximoAgendamento: proximoAgendamento,
-            receitaMes: totalReceitaMes,
-            recentActivity: formattedRecentActivity
+            dataAgendamento: { $gte: inicioSemana, $lt: fimSemana }
         });
+
+        // Agendamentos Confirmados (total geral)
+        const agendamentosConfirmadosCount = await Agendamento.countDocuments({
+            companyId: companyId,
+            status: 'Confirmado'
+        });
+
+        // Agendamentos Concluídos (total geral)
+        const agendamentosConcluidosCount = await Agendamento.countDocuments({
+            companyId: companyId,
+            status: 'Concluído'
+        });
+
+        // --- LISTAGEM DOS AGENDAMENTOS DO DIA ---
+        const agendamentosDoDiaList = await Agendamento.find({
+            companyId: companyId,
+            dataAgendamento: { $gte: hoje, $lt: amanha } // Usa a mesma lógica de hoje
+        }).populate('cliente', 'nome').sort({ dataAgendamento: 1 }); // Popula o cliente para exibir o nome
+
+        // --- ENVIA TODOS OS DADOS EM UMA ÚNICA RESPOSTA ---
+        res.status(200).json({
+            agendamentosHojeCount,
+            agendamentosSemanaCount,
+            agendamentosConfirmadosCount,
+            agendamentosConcluidosCount,
+            agendamentosDoDiaList
+        });
+
     } catch (error) {
-        console.error("Erro ao buscar dados do dashboard no backend:", error); //
-        res.status(500).json({ message: "Erro interno do servidor ao buscar dados do dashboard." }); //
+        console.error("Erro ao buscar dados do dashboard no backend:", error); 
+        res.status(500).json({ message: "Erro interno do servidor ao buscar dados do dashboard." }); 
     }
 });
 
+// Rotas de API para as outras seções do sistema
 app.use('/api/clientes', protect, clienteRoutes); 
-app.use('/api/agendamentos', protect, agendamentoRoutes);
-app.use('/api/transacoes', protect, transacaoRoutes);
+app.use('/api/agendamentos', protect, agendamentoRoutes); // Note que este é para rotas como /api/agendamentos (GET ALL), /api/agendamentos/:id
+app.use('/api/transacoes', protect, transacaoRoutes); 
 app.use('/api/profissionais', protect, profissionalRoutes); 
 app.use('/api/users', protect, userRoutes);
 
