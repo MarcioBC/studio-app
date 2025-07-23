@@ -6,7 +6,11 @@
     <title>Agendamentos</title>
     <link rel="stylesheet" href="/css/global.css">
     <link rel="stylesheet" href="/css/clientes.css">
-    <link rel="stylesheet" href="/css/agendamentos.css"> </head>
+    <link rel="stylesheet" href="/css/agendamentos.css">
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment-timezone/0.5.34/moment-timezone-with-data.min.js"></script>
+</head>
 <body>
     <button class="menu-toggle" id="menuToggle">☰</button>
     <div class="dashboard-container">
@@ -34,7 +38,7 @@
 
             <div class="filter-and-month-container">
                 <div class="filter-container">
-                    <input type="text" id="agendamentoSearchInput" placeholder="Buscar agendamento por nome, data, profissional, sala, procedimento..." autocomplete="off">
+                    <input type="text" id="agendamentoSearchInput" placeholder="Buscar agendamento por nome, data (DD/MM/AAAA), profissional, sala, procedimento..." autocomplete="off">
                 </div>
                 <div class="month-navigation-controls">
                     <button id="prevMonthBtn">&lt;</button>
@@ -93,11 +97,9 @@
 
     <script src="/js/main.js"></script>
     <script>
-    // Defina o fuso horário para o frontend também, para consistência ao salvar/exibir datas
-    const STUDIO_TIMEZONE = 'America/Sao_Paulo'; //
+    const STUDIO_TIMEZONE = 'America/Sao_Paulo';
 
     document.addEventListener('DOMContentLoaded', () => {
-        // --- Lógica para carregar o nome da empresa ---
         const companyName = localStorage.getItem('companyName');
         const sidebarCompanyNameElement = document.getElementById('sidebarCompanyName');
 
@@ -109,7 +111,6 @@
             if (sidebarCompanyNameElement) { sidebarCompanyNameElement.textContent = "Studio Je Marqui"; }
         }
     
-        // --- Lógica do menu hambúrguer diretamente no agendamentos.html ---
         const menuToggle = document.getElementById('menuToggle');
         const sidebar = document.getElementById('sidebar');
 
@@ -149,7 +150,6 @@
         const cancelBtn = document.getElementById('cancelBtn');
         const profissionalSelect = document.getElementById('profissional');
 
-        // NOVO: Elemento do campo de busca
         const agendamentoSearchInput = document.getElementById('agendamentoSearchInput');
         
         const formatAsCurrency = (value) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
@@ -212,14 +212,17 @@
             selectedClientIdInput.value = ag.cliente._id;
             selectedClientNameSpan.textContent = ag.cliente.nome;
             
-            const dataAgendamentoObj = new Date(ag.dataAgendamento); // Data em UTC do DB
-            const ano = dataAgendamentoObj.getFullYear();
-            const mes = (dataAgendamentoObj.getMonth() + 1).toString().padStart(2, '0');
-            const dia = dataAgendamentoObj.getDate().toString().padStart(2, '0');
+            const dataAgendamentoObj = new Date(ag.dataAgendamento);
+            const localTimeMs = dataAgendamentoObj.getTime() - (dataAgendamentoObj.getTimezoneOffset() * 60 * 1000);
+            const localDate = new Date(localTimeMs);
+
+            const ano = localDate.getFullYear();
+            const mes = (localDate.getMonth() + 1).toString().padStart(2, '0');
+            const dia = localDate.getDate().toString().padStart(2, '0');
             document.getElementById('dataAgendamento').value = `${ano}-${mes}-${dia}`;
             
-            const horas = dataAgendamentoObj.getHours().toString().padStart(2, '0');
-            const minutos = dataAgendamentoObj.getMinutes().toString().padStart(2, '0');
+            const horas = localDate.getHours().toString().padStart(2, '0');
+            const minutos = localDate.getMinutes().toString().padStart(2, '0');
             document.getElementById('horaAgendamento').value = `${horas}:${minutos}`;
 
             document.getElementById('profissional').value = ag.profissional;
@@ -238,7 +241,7 @@
 
         async function fetchAllClients() {
             try {
-                const token = localStorage.getItem('token');
+                const token = localStorage.getItem('token'); 
                 const response = await fetch('/api/clientes', {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
@@ -253,17 +256,17 @@
 
         async function fetchAndPopulateProfissionais() {
             try {
-                const token = localStorage.getItem('token');
+                const token = localStorage.getItem('token'); 
                 const response = await fetch('/api/profissionais', {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 if (response.status === 401 || response.status === 403) {
                     console.error("Não autorizado ao buscar profissionais. Redirecionando para login.");
-                    logoutUser();
-                    return;
+                    logoutUser(); 
+                    return; 
                 }
                 const profissionais = await response.json();
-                profissionalSelect.innerHTML = '<option value="">Selecione um profissional</option>';
+                profissionalSelect.innerHTML = '<option value="">Selecione um profissional</option>'; 
                 profissionais.forEach(prof => {
                     const option = document.createElement('option');
                     option.value = prof.nome;
@@ -279,11 +282,23 @@
         async function fetchAndRenderAgendamentos() {
             agendamentoListDiv.innerHTML = '<p>Carregando agendamentos...</p>';
             
-            let url = `/api/agendamentos?mes=${mesAtual + 1}&ano=${anoAtual}`;
-            const searchTerm = agendamentoSearchInput.value.trim();
-            if (searchTerm) {
-                url += `&search=${encodeURIComponent(searchTerm)}`;
+            let searchTerm = agendamentoSearchInput.value.trim();
+            let formattedSearchTerm = searchTerm;
+
+            const dateRegexDDMMYYYY = /^(\d{2})\/(\d{2})\/(\d{4})$/;
+            if (dateRegexDDMMYYYY.test(searchTerm)) {
+                const parts = searchTerm.match(dateRegexDDMMYYYY);
+                formattedSearchTerm = `${parts[3]}-${parts[2]}-${parts[1]}`;
+                console.log(`Frontend: Termo de busca de data "${searchTerm}" convertido para: ${formattedSearchTerm}`);
+            } else if (searchTerm && !/^\d{4}-\d{2}-\d{2}$/.test(searchTerm)) {
+                console.log(`Frontend: Termo de busca de texto: "${searchTerm}"`);
             }
+
+            let url = `/api/agendamentos?mes=${mesAtual + 1}&ano=${anoAtual}`;
+            if (searchTerm) {
+                url += `&search=${encodeURIComponent(formattedSearchTerm)}`;
+            }
+            console.log("Frontend: URL da requisição de agendamentos:", url);
 
             try {
                 const token = localStorage.getItem('token');
@@ -299,26 +314,31 @@
                 agendamentosData = agendamentos;
                 agendamentoListDiv.innerHTML = '';
                 if (!Array.isArray(agendamentos) || agendamentos.length === 0) {
-                    agendamentoListDiv.innerHTML = `<p>Nenhum agendamento encontrado para ${currentMonthDisplay.textContent}.</p>`;
+                    let message = `Nenhum agendamento encontrado para ${currentMonthDisplay.textContent}.`;
                     if (searchTerm) {
-                         agendamentoListDiv.innerHTML = `<p>Nenhum agendamento encontrado para a busca "${searchTerm}".</p>`;
+                         message = `Nenhum agendamento encontrado para a busca "${searchTerm}".`;
                     }
+                    agendamentoListDiv.innerHTML = `<p>${message}</p>`;
                     return;
                 }
                 agendamentos.forEach(ag => {
                     const card = document.createElement('div');
                     card.className = 'client-card';
                     
-                    // Ajuste para exibir a data no fuso horário local (cliente-side)
-                    const dataAgendamentoObj = new Date(ag.dataAgendamento); // Objeto Date em UTC do DB
+                    const dataAgendamentoObj = new Date(ag.dataAgendamento);
                     const dataFormatada = dataAgendamentoObj.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
                     const horaFormatada = dataAgendamentoObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
                     const nomesProcedimentos = ag.procedimentos.map(p => p.nome).join(', ');
-                    const statusClass = `status-${(ag.status || 'pendente').toLowerCase().replace('ú', 'u')}`;
+                   const normalizeStatus = (str) => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+const statusClass = `status-${normalizeStatus(ag.status || 'pendente')}`;
+
+                    // RESTAURAÇÃO E CORREÇÃO: Renderiza o span de status e action-icons sempre
                     card.innerHTML = `<div style="flex: 1;"><strong>${dataFormatada} às ${horaFormatada}</strong> - ${ag.cliente ? ag.cliente.nome : 'Cliente Removido'}<br><small><b>Procedimentos:</b> ${nomesProcedimentos}</small><br><small><b>Profissional:</b> ${ag.profissional} - <b>Sala:</b> ${ag.sala}</small></div><div style="text-align: right;"><span class="status ${statusClass}" data-id="${ag._id}" data-status="${ag.status}">${ag.status}</span><p style="margin:10px 0 0 0; font-weight: bold;">${formatAsCurrency(ag.valorTotal)}</p><div class="action-icons" style="margin-top: 10px;"><span class="icon-edit" data-id="${ag._id}" title="Editar">✏️</span><span class="icon-delete" data-id="${ag._id}" title="Excluir">🗑️</span></div></div>`;
                     agendamentoListDiv.appendChild(card);
                 });
+                // Os event listeners para status, editar e excluir serão adicionados
+                // via event delegation, fora deste loop, mais abaixo no script.
             } catch (error) {
                 agendamentoListDiv.innerHTML = '<p style="color: red;">Erro ao carregar os agendamentos.</p>';
                 console.error("Erro ao carregar os agendamentos no frontend:", error);
@@ -368,13 +388,8 @@
             }
         });
 
-        // NOVO: Event listener para o campo de busca de agendamentos
         agendamentoSearchInput.addEventListener('input', () => {
-            // Quando o usuário digita na busca, resetamos o mês/ano para o atual
-            // para que a busca seja ampla, a menos que ele mude o mês depois.
-            // Ou, pode-se decidir manter o mês/ano atual se a busca for específica.
-            // Por simplicidade, vamos manter o mês/ano atual e filtrar dentro dele.
-            updateAll(); // Recarrega os agendamentos com o novo termo de busca
+            updateAll();
         });
         
         agendamentoForm.addEventListener('submit', async (e) => {
@@ -383,16 +398,18 @@
             const dataInput = document.getElementById('dataAgendamento').value;
             const horaInput = document.getElementById('horaAgendamento').value;
 
-            // CORREÇÃO: Cria a data/hora no fuso horário do Studio antes de enviar para o backend
-            const STUDIO_TIMEZONE = 'America/Sao_Paulo'; //
-            // Certifique-se de que moment.js esteja carregado para usar moment.tz
-            // Você precisará incluir a biblioteca moment-timezone.js no seu HTML (script src)
-            const dataAgendamentoLocal = moment.tz(`${dataInput}T${horaInput}:00`, 'YYYY-MM-DDTHH:mm:ss', STUDIO_TIMEZONE);
-            const dataAgendamentoUTC = dataAgendamentoLocal.toDate();
+            // --- CORREÇÃO AQUI: Usando moment-timezone para criar a data UTC ---
+            const localDateTimeString = `${dataInput}T${horaInput}:00`;
+            if (!moment(localDateTimeString).isValid()) {
+                alert("Por favor, insira uma data e hora válidas para o agendamento.");
+                return;
+            }
+            const dataAgendamentoUTC = moment.tz(localDateTimeString, STUDIO_TIMEZONE).toISOString();
+            // --- FIM DA CORREÇÃO ---
 
             const payload = {
                 cliente: selectedClientIdInput.value,
-                dataAgendamento: dataAgendamentoUTC, // Envia a data convertida para UTC
+                dataAgendamento: dataAgendamentoUTC,
                 procedimentos: [...agendamentoForm.querySelectorAll('.procedimento-row')].map(row => ({ nome: row.querySelector('[name=procedimento_nome]').value, valor: parseCurrency(row.querySelector('[name=procedimento_valor]').value) })),
                 profissional: document.getElementById('profissional').value,
                 sala: document.getElementById('sala').value,
@@ -431,66 +448,80 @@
             }
         });
 
+        // --- CORREÇÃO: Listener para mudança de status, edição e exclusão usando Event Delegation ---
+        // Este listener é mais eficiente e funciona para elementos adicionados dinamicamente
         agendamentoListDiv.addEventListener('click', async (e) => {
-            const target = e.target.closest('span[data-id]');
-            if (!target) return;
-            const id = target.dataset.id;
-            if (target.classList.contains('icon-edit')) {
-                openEditModal(id);
+            const target = e.target;
+            // Tenta encontrar o 'data-id' do elemento clicado ou de um pai próximo
+            const agendamentoId = target.dataset.id || target.closest('[data-id]')?.dataset.id;
+
+            if (!agendamentoId) return; // Se o clique não foi em um elemento com data-id, ignora
+
+            // Lógica para mudança de status
+            if (target.classList.contains('status')) { // AQUI é o span de status
+                const currentStatus = target.dataset.status;
+                let nextStatus;
+
+                switch (currentStatus) {
+                    case 'Pendente': nextStatus = 'Confirmado'; break;
+                    case 'Confirmado': nextStatus = 'Concluído'; break;
+                    case 'Concluído': nextStatus = 'Pendente'; break; // Ciclo
+                    case 'Cancelado': nextStatus = 'Pendente'; break; // Exemplo de reativação
+                    default: nextStatus = 'Pendente';
+                }
+
+                if (!nextStatus) return; // Evita requisição se nextStatus não for definido
+
+                const token = localStorage.getItem('token');
+                if (!token) { logoutUser(); return; }
+
+                try {
+                    const response = await fetch(`/api/agendamentos/${agendamentoId}/status`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                        body: JSON.stringify({ status: nextStatus })
+                    });
+
+                    if (response.status === 401 || response.status === 403) { logoutUser(); return; }
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.message || 'Erro ao atualizar status.');
+                    }
+
+                    alert(`Status do agendamento atualizado para: ${nextStatus}`);
+                    updateAll(); // Recarrega a lista para refletir a mudança
+                } catch (error) {
+                    console.error("Erro ao atualizar status do agendamento:", error);
+                    alert("Erro ao atualizar status: " + error.message);
+                }
             }
-            if (target.classList.contains('icon-delete')) {
+            // Lógica para editar
+            else if (target.classList.contains('icon-edit')) {
+                openEditModal(agendamentoId);
+            }
+            // Lógica para excluir
+            else if (target.classList.contains('icon-delete')) {
                 if (confirm('Tem certeza que deseja excluir este agendamento?')) {
                     try {
                         const token = localStorage.getItem('token');
-                        const response = await fetch(`/api/agendamentos/${id}`, {
+                        const response = await fetch(`/api/agendamentos/${agendamentoId}`, {
                             method: 'DELETE',
                             headers: { 'Authorization': `Bearer ${token}` }
                         });
-                        if (response.status === 401 || response.status === 403) {
-                            console.error("Não autorizado ao excluir agendamento. Redirecionando para login.");
-                            logoutUser();
-                            return;
-                        }
+                        if (response.status === 401 || response.status === 403) { logoutUser(); return; }
                         const result = await response.json();
                         if (response.ok) { alert(result.message); updateAll(); } else { alert(`Erro: ${result.message || 'Erro ao excluir o agendamento.'}`); }
                     } catch (error) { alert('Erro de conexão ao excluir.'); console.error("Erro de conexão ao excluir agendamento no frontend:", error); }
                 }
             }
-            if (target.classList.contains('status')) {
-                const currentStatus = target.dataset.status;
-                let nextStatus = null;
-                if (currentStatus === 'Pendente') nextStatus = 'Confirmado';
-                else if (currentStatus === 'Confirmado') nextStatus = 'Concluído';
-                
-                if (nextStatus) {
-                    try {
-                        const token = localStorage.getItem('token');
-                        const response = await fetch(`/api/agendamentos/${id}/status`, {
-                            method: 'PATCH',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'Authorization': `Bearer ${token}`
-                            },
-                            body: JSON.stringify({ status: nextStatus })
-                        });
-                        if (response.status === 401 || response.status === 403) {
-                            console.error("Não autorizado ao atualizar status. Redirecionando para login.");
-                            logoutUser();
-                            return;
-                        }
-                        const result = await response.json();
-                        if (response.ok) { alert(result.message); updateAll(); } else { alert(`Erro: ${result.message || 'Erro ao atualizar status.'}`); }
-                    }
-                    catch (error) { alert('Erro de conexão.'); console.error("Erro de conexão ao atualizar status no frontend:", error); }
-                }
-            }
         });
+        // --- FIM DA CORREÇÃO DE EVENT DELEGATION ---
         
         updateAll();
         fetchAllClients();
         fetchAndPopulateProfissionais();
 
-        // --- INÍCIO DA LÓGICA DE INATIVIDADE ---
+        // --- Lógica de Inatividade (permanece a mesma) ---
         const INACTIVITY_TIME = 10 * 60 * 1000;
         let timeoutId;
 
