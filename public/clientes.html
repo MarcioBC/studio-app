@@ -38,6 +38,9 @@
 
             <section class="client-list-container">
                 <h2>Lista de Clientes (<span id="clientCount">0</span>)</h2>
+                <div class="client-search-filter">
+                    <input type="text" id="clientSearchInputList" placeholder="Buscar cliente por nome ou telefone..." autocomplete="off">
+                </div>
                 <div id="clientList">
                     <p>Carregando clientes...</p>
                 </div>
@@ -138,14 +141,14 @@
         const sidebarCompanyNameElement = document.getElementById('sidebarCompanyName');
 
         if (companyName) {
-            document.title = `${companyName} - Clientes`; // Atualiza o título da página
+            document.title = `${companyName} - Clientes`;
             if (sidebarCompanyNameElement) {
                 sidebarCompanyNameElement.textContent = companyName;
             }
         } else {
-            document.title = "Studio Je Marqui - Clientes"; // Fallback para título
+            document.title = "Studio Je Marqui - Clientes";
             if (sidebarCompanyNameElement) {
-                sidebarCompanyNameElement.textContent = "Studio Je Marqui"; // Fallback para sidebar
+                sidebarCompanyNameElement.textContent = "Studio Je Marqui";
             }
         }
         // --- FIM DA MUDANÇA ---
@@ -190,6 +193,9 @@
         const submitButton = step2.querySelector('button[type="submit"]');
         const clientListDiv = document.getElementById('clientList');
         const clientCountSpan = document.getElementById('clientCount');
+
+        // NOVO: Campo de busca da lista de clientes
+        const clientSearchInputList = document.getElementById('clientSearchInputList');
 
         // --- Funções de Máscara ---
         function applyMask(input, maskFunction) {
@@ -247,19 +253,27 @@
         
         async function fetchAndRenderClients() {
             clientListDiv.innerHTML = '<p>Carregando clientes...</p>';
+            
+            let url = '/api/clientes';
+            const searchTerm = clientSearchInputList.value.trim(); // Captura o valor do campo de busca
+
+            if (searchTerm) {
+                // É importante codificar o termo de busca para a URL
+                url += `?search=${encodeURIComponent(searchTerm)}`;
+            }
+            console.log("Frontend: URL da requisição de clientes:", url); // Log para depuração
+
             try {
-                // MUDANÇA AQUI: Pega o token para a requisição autenticada
                 const token = localStorage.getItem('token'); 
-                const response = await fetch('/api/clientes', {
+                const response = await fetch(url, {
                     headers: {
-                        'Authorization': `Bearer ${token}` // ADICIONA O CABEÇALHO DE AUTORIZAÇÃO
+                        'Authorization': `Bearer ${token}`
                     }
                 });
-                // TRATAMENTO DO ERRO 401/403:
                 if (response.status === 401 || response.status === 403) {
                     console.error("Não autorizado ao buscar clientes. Redirecionando para login.");
-                    logoutUser(); // Chama a função de logout (limpa localStorage e redireciona)
-                    return; // Interrompe a execução
+                    logoutUser();
+                    return;
                 }
 
                 const clientes = await response.json();
@@ -267,8 +281,12 @@
                 clientListDiv.innerHTML = '';
                 clientCountSpan.textContent = clientes.length;
 
-                if (!Array.isArray(clientes) || clientes.length === 0) { // VERIFICA SE É ARRAY
-                    clientListDiv.innerHTML = '<p>Nenhum cliente registado ainda.</p>';
+                if (!Array.isArray(clientes) || clientes.length === 0) {
+                    let message = 'Nenhum cliente registrado ainda.';
+                    if (searchTerm) {
+                        message = `Nenhum cliente encontrado para a busca "${searchTerm}".`;
+                    }
+                    clientListDiv.innerHTML = `<p>${message}</p>`;
                     return;
                 }
 
@@ -302,17 +320,15 @@
             displayStatus(phoneStatus, '');
             phoneStatus.style.display = 'none';
             try {
-                // MUDANÇA AQUI: Pega o token para a requisição autenticada
                 const token = localStorage.getItem('token'); 
                 const response = await fetch('/api/clientes/check-phone', {
                     method: 'POST',
                     headers: { 
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}` // ADICIONA O CABEÇALHO DE AUTORIZAÇÃO
+                        'Authorization': `Bearer ${token}`
                     },
                     body: JSON.stringify({ telefone: telefone }),
                 });
-                // TRATAMENTO DO ERRO 401/403:
                 if (response.status === 401 || response.status === 403) {
                     console.error("Não autorizado ao verificar telefone. Redirecionando para login.");
                     logoutUser(); 
@@ -350,10 +366,6 @@
 
             delete data.telefone_check;
             
-            // =======================================================
-            // CORREÇÃO: Removendo campos vazios ANTES de enviar.
-            // Isso previne que dados existentes sejam apagados com strings vazias.
-            // =======================================================
             const payload = {};
             for (const key in data) {
                 if (data[key] !== '' && data[key] !== null) {
@@ -364,17 +376,15 @@
             displayStatus(formStatus, editingId ? 'A atualizar cliente...' : 'A registar cliente...', false);
 
             try {
-                // MUDANÇA AQUI: Pega o token para a requisição autenticada
                 const token = localStorage.getItem('token'); 
                 const response = await fetch(url, {
                     method: method,
                     headers: { 
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}` // ADICIONA O CABEÇALHO DE AUTORIZAÇÃO
+                        'Authorization': `Bearer ${token}`
                     },
-                    body: JSON.stringify(payload), // Envia o payload limpo
+                    body: JSON.stringify(payload),
                 });
-                // TRATAMENTO DO ERRO 401/403:
                 if (response.status === 401 || response.status === 403) {
                     console.error("Não autorizado ao salvar cliente. Redirecionando para login.");
                     logoutUser(); 
@@ -383,7 +393,7 @@
                 const result = await response.json();
                 if (response.ok) {
                     displayStatus(formStatus, result.message, false);
-                    fetchAndRenderClients();
+                    fetchAndRenderClients(); // Recarrega a lista após salvar
                     setTimeout(() => modal.style.display = 'none', 1500);
                 } else {
                     displayStatus(formStatus, result.message || 'Erro na operação.', true);
@@ -401,15 +411,11 @@
             if (target.classList.contains('icon-delete')) {
                 if (confirm('Tem certeza de que deseja excluir este cliente?')) {
                     try {
-                        // MUDANÇA AQUI: Pega o token para a requisição autenticada
                         const token = localStorage.getItem('token'); 
                         const response = await fetch(`/api/clientes/${clienteId}`, { 
                             method: 'DELETE',
-                            headers: { 
-                                'Authorization': `Bearer ${token}` // ADICIONA O CABEÇALHO DE AUTORIZAÇÃO
-                            }
+                            headers: { 'Authorization': `Bearer ${token}` }
                         });
-                        // TRATAMENTO DO ERRO 401/403:
                         if (response.status === 401 || response.status === 403) {
                             console.error("Não autorizado ao excluir cliente. Redirecionando para login.");
                             logoutUser(); 
@@ -431,7 +437,6 @@
                 submitButton.textContent = 'Salvar Alterações';
                 clientForm.dataset.editingId = clienteId;
 
-                // --- PREENCHIMENTO COMPLETO E CORRIGIDO DO FORMULÁRIO PARA EDIÇÃO ---
                 document.getElementById('nome').value = clienteParaEditar.nome || '';
                 document.getElementById('telefone').value = maskPhone(clienteParaEditar.telefone);
                 document.getElementById('cpf').value = maskCPF(clienteParaEditar.cpf);
@@ -444,9 +449,8 @@
                 document.getElementById('numero').value = clienteParaEditar.numero || '';
                 document.getElementById('complemento').value = clienteParaEditar.complemento || '';
                 document.getElementById('bairro').value = clienteParaEditar.bairro || '';
-                document.getElementById('cidade').value = clienteParaEditar.cidade || ''; // Corrigido para data.localidade
+                document.getElementById('cidade').value = clienteParaEditar.cidade || '';
                 document.getElementById('estado').value = clienteParaEditar.estado || '';
-                // -----------------------------------------------------------
 
                 step1.style.display = 'none';
                 step2.style.display = 'block';
@@ -470,11 +474,15 @@
             } catch (error) { console.error('Erro ao buscar CEP:', error); }
         });
         
+        // NOVO: Event listener para o campo de busca de clientes
+        clientSearchInputList.addEventListener('input', () => {
+            fetchAndRenderClients(); // Recarrega a lista de clientes com o termo de busca
+        });
+
         fetchAndRenderClients(); // Chama a função para carregar clientes após o DOM carregar
 
         // --- INÍCIO DA LÓGICA DE INATIVIDADE ---
-        const INACTIVITY_TIME = 10 * 60 * 1000; // 10 minutos em milissegundos
-        // Se você quer 10 segundos para teste: const INACTIVITY_TIME = 10 * 1000; // 10 segundos
+        const INACTIVITY_TIME = 10 * 60 * 1000;
         let timeoutId;
 
         function startInactivityTimer() {
@@ -488,7 +496,7 @@
             }
         }
 
-        resetInactivityTimer(); // Inicia o temporizador quando a página carrega
+        resetInactivityTimer();
 
         document.addEventListener('mousemove', resetInactivityTimer);
         document.addEventListener('keypress', resetInactivityTimer);

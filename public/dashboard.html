@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard</title> 
+    <title>Dashboard</title>
     <link rel="stylesheet" href="/css/normalize.css">
     <link rel="stylesheet" href="/css/global.css">
     <link rel="stylesheet" href="/css/clientes.css">
@@ -14,7 +14,7 @@
     <button class="menu-toggle" id="menuToggle">☰</button>
     <div class="dashboard-container">
         <aside class="sidebar" id="sidebar">
-            <h2 id="sidebarCompanyName"></h2> 
+            <h2 id="sidebarCompanyName"></h2>
             <nav>
                 <ul>
                     <li><a href="/dashboard.html" class="active">Dashboard</a></li>
@@ -22,9 +22,9 @@
                     <li><a href="/agendamentos.html">Agendamentos</a></li>
                     <li><a href="/livro-caixa.html">Livro Caixa</a></li>
                     <li><a href="/relatorios.html">Relatórios</a></li>
-                    <li><a href="/profissionais.html">Gerenciar profissionais</a></li> 
+                    <li><a href="/profissionais.html">Gerenciar profissionais</a></li>
                     <li><a href="/gerenciar-usuarios.html">Gerenciar Usuários</a></li>
-                    <li style="margin-top: auto;"><a href="/api/auth/logout" style="color: #ffc107;">Sair</a></li> 
+                    <li style="margin-top: auto;"><a href="/api/auth/logout" style="color: #ffc107;">Sair</a></li>
                 </ul>
             </nav>
         </aside>
@@ -54,14 +54,25 @@
             </section>
 
             <section class="recent-activity">
-                <h2>Listagem dos Agendamentos do Dia</h2>
-                <div id="agendamentosDoDiaList">
-                    <p>Carregando agendamentos...</p>
+                <div class="dashboard-agenda-card">
+                    <h2>Listagem dos Agendamentos do Dia</h2>
+                    <div id="agendamentosDoDiaList">
+                        <p>Carregando agendamentos...</p>
+                    </div>
                 </div>
-            </section>
+                </section>
         </main>
     </div>
 
+    <div id="birthdayModal" class="modal">
+        <div class="modal-content">
+            <h2 class="modal-title">Aniversariantes do Dia!</h2>
+            <div id="birthdayList">
+                <p>Nenhum aniversariante hoje.</p>
+            </div>
+            <button class="modal-close-button" id="closeBirthdayModal">Fechar</button>
+        </div>
+    </div>
     <script src="/js/main.js"></script>
     <script>
     document.addEventListener('DOMContentLoaded', () => {
@@ -69,7 +80,7 @@
         const companyName = localStorage.getItem('companyName');
         const sidebarCompanyNameElement = document.getElementById('sidebarCompanyName');
         if (companyName) {
-            document.title = `${companyName} - Dashboard`; // Atualiza o título da página
+            document.title = `${companyName} - Dashboard`;
             if (sidebarCompanyNameElement) {
                 sidebarCompanyNameElement.textContent = companyName;
             }
@@ -110,11 +121,11 @@
             console.log("dashboard.html: Buscando dados do dashboard...");
             const token = localStorage.getItem('token');
             console.log("dashboard.html: Token lido do localStorage para requisicao:", token ? "Token presente" : "Token ausente");
-            
+
             if (!token) {
                 console.error("dashboard.html: Token não encontrado ao buscar dados do dashboard.");
                 if (typeof logoutUser === 'function') {
-                    logoutUser(); 
+                    logoutUser();
                 } else {
                     console.error("Função logoutUser não encontrada. Redirecione manualmente.");
                     window.location.href = '/index.html';
@@ -123,7 +134,6 @@
             }
 
             try {
-                // Requisição para a rota /api/dashboard (que precisaremos ajustar no backend)
                 const response = await fetch('/api/dashboard', {
                     headers: {
                         'Authorization': `Bearer ${token}`
@@ -139,18 +149,16 @@
                 const data = await response.json();
                 console.log("dashboard.html: Dados do dashboard recebidos:", data);
 
-                // Popular os cards com os dados recebidos
                 agendamentosHojeCountEl.textContent = data.agendamentosHojeCount || 0;
                 agendamentosSemanaCountEl.textContent = data.agendamentosSemanaCount || 0;
                 agendamentosConfirmadosCountEl.textContent = data.agendamentosConfirmadosCount || 0;
                 agendamentosConcluidosCountEl.textContent = data.agendamentosConcluidosCount || 0;
-                
-                // --- Preenchimento da Listagem dos Agendamentos do Dia ---
-                agendamentosDoDiaListEl.innerHTML = ''; // Limpa o conteúdo anterior
+
+                agendamentosDoDiaListEl.innerHTML = '';
                 if (Array.isArray(data.agendamentosDoDiaList) && data.agendamentosDoDiaList.length > 0) {
                     data.agendamentosDoDiaList.forEach(ag => {
                         const item = document.createElement('div');
-                        item.className = 'activity-item'; // Você pode querer uma classe diferente aqui
+                        item.className = 'activity-item'; // Use a classe existente para estilizar os itens da lista
                         const dataAgendamentoObj = new Date(ag.dataAgendamento);
                         const dataFormatada = dataAgendamentoObj.toLocaleDateString('pt-BR');
                         const horaFormatada = dataAgendamentoObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
@@ -170,7 +178,6 @@
 
             } catch (error) {
                 console.error("dashboard.html: Erro ao buscar dados do dashboard:", error);
-                // Define um estado de erro para os cards
                 agendamentosHojeCountEl.textContent = 'Erro';
                 agendamentosSemanaCountEl.textContent = 'Erro';
                 agendamentosConfirmadosCountEl.textContent = 'Erro';
@@ -179,11 +186,10 @@
             }
         }
 
-        // Chama a função para buscar e popular os dados do dashboard
         fetchDashboardData();
 
         // --- Lógica do Temporizador de Inatividade (no final do DOMContentLoaded) ---
-        const INACTIVITY_TIME = 10 * 60 * 1000; // 10 minutos em milissegundos
+        const INACTIVITY_TIME = 10 * 60 * 1000;
         let timeoutId;
 
         function startInactivityTimer() {
@@ -192,7 +198,7 @@
             console.log("dashboard.html: Timer de inatividade iniciado/reiniciado.");
         }
 
-        window.resetInactivityTimer = function() { // Torna global para main.js ou outros scripts
+        window.resetInactivityTimer = function() {
             if (localStorage.getItem('token')) {
                 startInactivityTimer();
             } else {
@@ -200,13 +206,114 @@
             }
         }
 
-        resetInactivityTimer(); // Inicia o temporizador quando a página carrega
+        resetInactivityTimer();
 
         document.addEventListener('mousemove', resetInactivityTimer);
         document.addEventListener('keypress', resetInactivityTimer);
         document.addEventListener('click', resetInactivityTimer);
         document.addEventListener('scroll', resetInactivityTimer);
         // --- FIM DA LÓGICA DE INATIVIDADE ---
+
+        // --- Lógica do Modal de Aniversariantes: Exibir APENAS na primeira carga após login ---
+        const birthdayModal = document.getElementById('birthdayModal');
+        const closeBirthdayModalBtn = document.getElementById('closeBirthdayModal');
+        const birthdayListElement = document.getElementById('birthdayList');
+
+        console.log('DOM ready. birthdayModal element:', birthdayModal);
+        console.log('DOM ready. closeBirthdayModalBtn element:', closeBirthdayModalBtn);
+
+        async function fetchBirthdays() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                if (birthdayModal) birthdayModal.style.display = 'none';
+                console.log("Modal escondido: Token não fornecido.");
+                return;
+            }
+
+            const MODAL_SHOWN_KEY = 'birthdayModalShownInSession';
+            const hasModalBeenShownInSession = localStorage.getItem(MODAL_SHOWN_KEY);
+
+            console.log("Modal já exibido nesta sessão de login?", hasModalBeenShownInSession);
+
+            if (hasModalBeenShownInSession) {
+                if (birthdayModal) birthdayModal.style.display = 'none';
+                console.log("Modal escondido: Já exibido nesta sessão de login.");
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/aniversariantes-do-dia', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (response.status === 401 || response.status === 403) {
+                    console.error("Não autorizado ao buscar aniversariantes.");
+                    if (birthdayModal) birthdayModal.style.display = 'none';
+                    console.log("Modal escondido: Não autorizado.");
+                    return;
+                }
+
+                const data = await response.json();
+                console.log("Aniversariantes do dia recebidos:", data);
+
+                birthdayListElement.innerHTML = '';
+                if (Array.isArray(data) && data.length > 0) {
+                    data.forEach(client => {
+                        const clientDiv = document.createElement('div');
+                        clientDiv.className = 'birthday-item';
+                        const dataNascimentoObj = new Date(client.dataNascimento);
+                        const diaNascimento = String(dataNascimentoObj.getDate()).padStart(2, '0');
+                        const mesNascimento = String(dataNascimentoObj.getMonth() + 1).padStart(2, '0');
+
+                        clientDiv.innerHTML = `
+                            <p><strong>${client.nome}</strong></p>
+                            <p>Nascimento: ${diaNascimento}/${mesNascimento}</p>
+                            <p>Telefone: ${client.telefone || 'Não informado'}</p>
+                            <hr>
+                        `;
+                        birthdayListElement.appendChild(clientDiv);
+                    });
+                } else {
+                    birthdayListElement.innerHTML = '<p>Nenhum aniversariante hoje!</p>';
+                }
+
+                if (birthdayModal) {
+                    birthdayModal.style.display = 'flex';
+                    console.log("Modal de Aniversariantes exibido: Primeira carga após login.");
+                }
+                localStorage.setItem(MODAL_SHOWN_KEY, 'true');
+                console.log("Local Storage atualizado: " + MODAL_SHOWN_KEY + " = true");
+
+
+            } catch (error) {
+                console.error("Erro ao buscar aniversariantes:", error);
+                birthdayListElement.innerHTML = '<p style="color:red;">Erro ao carregar aniversariantes.</p>';
+                if (birthdayModal) {
+                    birthdayModal.style.display = 'flex';
+                    console.log("Modal de Aniversariantes exibido com erro de carregamento.");
+                }
+                localStorage.setItem(MODAL_SHOWN_KEY, 'true');
+                console.log("Local Storage atualizado (com erro): " + MODAL_SHOWN_KEY + " = true");
+            }
+        }
+
+        if (closeBirthdayModalBtn) {
+            console.log("Adicionando event listener ao botão de fechar modal.");
+            closeBirthdayModalBtn.addEventListener('click', () => {
+                console.log("Botão de fechar modal clicado.");
+                if (birthdayModal) {
+                    birthdayModal.style.display = 'none';
+                    console.log("Modal escondido por clique do usuário.");
+                }
+            });
+        } else {
+            console.warn("Elemento 'closeBirthdayModalBtn' não encontrado! Verifique o ID no HTML.");
+        }
+
+        fetchBirthdays();
+        // --- FIM DA LÓGICA DO MODAL DE ANIVERSARIANTES ---
     });
     </script>
 </body>

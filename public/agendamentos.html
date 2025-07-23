@@ -6,14 +6,7 @@
     <title>Agendamentos</title>
     <link rel="stylesheet" href="/css/global.css">
     <link rel="stylesheet" href="/css/clientes.css">
-    <link rel="stylesheet" href="/css/agendamentos.css">
-    <style>
-        .month-navigator { display: flex; justify-content: center; align-items: center; gap: 20px; margin-bottom: 20px; }
-        .month-navigator button { background-color: #6c757d; border: none; color: white; border-radius: 50%; width: 40px; height: 40px; font-size: 1.5em; cursor: pointer; transition: background-color 0.2s; }
-        .month-navigator button:hover { background-color: #5a6268; }
-        .month-navigator h3 { margin: 0; font-size: 1.5em; color: #343a40; min-width: 250px; text-align: center; }
-    </style>
-</head>
+    <link rel="stylesheet" href="/css/agendamentos.css"> </head>
 <body>
     <button class="menu-toggle" id="menuToggle">☰</button>
     <div class="dashboard-container">
@@ -39,10 +32,15 @@
                 <button class="btn-primary" id="novoAgendamentoBtn">Novo Agendamento</button>
             </header>
 
-            <div class="month-navigator">
-                <button id="prevMonthBtn">&lt;</button>
-                <h3 id="currentMonthDisplay"></h3>
-                <button id="nextMonthBtn">&gt;</button>
+            <div class="filter-and-month-container">
+                <div class="filter-container">
+                    <input type="text" id="agendamentoSearchInput" placeholder="Buscar agendamento por nome, data, profissional, sala, procedimento..." autocomplete="off">
+                </div>
+                <div class="month-navigation-controls">
+                    <button id="prevMonthBtn">&lt;</button>
+                    <h3 id="currentMonthDisplay"></h3>
+                    <button id="nextMonthBtn">&gt;</button>
+                </div>
             </div>
 
             <section class="client-list-container">
@@ -79,9 +77,9 @@
                     <div class="form-row">
                         <div class="form-group form-group-two-thirds"><label for="profissional">Profissional</label><select id="profissional" name="profissional" required><option value="">Carregando...</option></select></div>
                         <div class="form-group form-group-one-third">
-    <label for="sala">Sala</label>
-    <input type="text" id="sala" name="sala" value="Sala 01" required>
-</div>
+                            <label for="sala">Sala</label>
+                            <input type="text" id="sala" name="sala" value="Sala 01" required>
+                        </div>
                     </div>
                     <div class="form-group"><label for="observacoes">Observações</label><textarea id="observacoes" name="observacoes" rows="4"></textarea></div>
                     <div class="form-summary-actions">
@@ -95,26 +93,21 @@
 
     <script src="/js/main.js"></script>
     <script>
+    // Defina o fuso horário para o frontend também, para consistência ao salvar/exibir datas
+    const STUDIO_TIMEZONE = 'America/Sao_Paulo'; //
+
     document.addEventListener('DOMContentLoaded', () => {
         // --- Lógica para carregar o nome da empresa ---
         const companyName = localStorage.getItem('companyName');
         const sidebarCompanyNameElement = document.getElementById('sidebarCompanyName');
 
         if (companyName) {
-            document.title = `${companyName} - Agendamentos`; // Atualiza o título da página
-            if (sidebarCompanyNameElement) {
-                sidebarCompanyNameElement.textContent = companyName;
-            }
+            document.title = `${companyName} - Agendamentos`;
+            if (sidebarCompanyNameElement) { sidebarCompanyNameElement.textContent = companyName; }
         } else {
-            document.title = "Studio Je Marqui - Agendamentos"; // Fallback para título
-            if (sidebarCompanyNameElement) {
-                sidebarCompanyNameElement.textContent = "Studio Je Marqui"; // Fallback para sidebar
-            }
-            // Opcional: Redirecionar para o login se o nome da empresa não for encontrado
-            // console.warn('Nome da empresa não encontrado no localStorage. Redirecionando para login.');
-            // window.location.href = '/index.html'; 
+            document.title = "Studio Je Marqui - Agendamentos";
+            if (sidebarCompanyNameElement) { sidebarCompanyNameElement.textContent = "Studio Je Marqui"; }
         }
-        // --- FIM DA MUDANÇA ---
     
         // --- Lógica do menu hambúrguer diretamente no agendamentos.html ---
         const menuToggle = document.getElementById('menuToggle');
@@ -129,7 +122,6 @@
         } else {
             console.warn("agendamentos.html: Elementos do menu hambúrguer (menuToggle ou sidebar) não encontrados.");
         }
-        // --- FIM DA MUDANÇA ---
     
         let allClients = [];
         let agendamentosData = [];
@@ -156,6 +148,9 @@
         const modalTitle = document.getElementById('modalTitle');
         const cancelBtn = document.getElementById('cancelBtn');
         const profissionalSelect = document.getElementById('profissional');
+
+        // NOVO: Elemento do campo de busca
+        const agendamentoSearchInput = document.getElementById('agendamentoSearchInput');
         
         const formatAsCurrency = (value) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
         const parseCurrency = (value) => parseFloat(String(value).replace('R$', '').replace(/\./g, '').replace(',', '.')) || 0;
@@ -243,18 +238,14 @@
 
         async function fetchAllClients() {
             try {
-                // MUDANÇA AQUI: Pega o token para a requisição autenticada
-                const token = localStorage.getItem('token'); 
+                const token = localStorage.getItem('token');
                 const response = await fetch('/api/clientes', {
-                    headers: {
-                        'Authorization': `Bearer ${token}` // ADICIONA O CABEÇALHO DE AUTORIZAÇÃO
-                    }
+                    headers: { 'Authorization': `Bearer ${token}` }
                 });
-                // TRATAMENTO DO ERRO 401/403:
                 if (response.status === 401 || response.status === 403) {
                     console.error("Não autorizado ao buscar clientes. Redirecionando para login.");
-                    logoutUser(); // Chama a função de logout (limpa localStorage e redireciona)
-                    return; // Interrompe a execução
+                    logoutUser();
+                    return;
                 }
                 allClients = await response.json();
             } catch (error) { console.error('Erro ao buscar clientes:', error); }
@@ -262,21 +253,17 @@
 
         async function fetchAndPopulateProfissionais() {
             try {
-                // MUDANÇA AQUI: Pega o token para a requisição autenticada
-                const token = localStorage.getItem('token'); 
+                const token = localStorage.getItem('token');
                 const response = await fetch('/api/profissionais', {
-                    headers: {
-                        'Authorization': `Bearer ${token}` // ADICIONA O CABEÇALHO DE AUTORIZAÇÃO
-                    }
+                    headers: { 'Authorization': `Bearer ${token}` }
                 });
-                // TRATAMENTO DO ERRO 401/403:
                 if (response.status === 401 || response.status === 403) {
                     console.error("Não autorizado ao buscar profissionais. Redirecionando para login.");
-                    logoutUser(); 
-                    return; 
+                    logoutUser();
+                    return;
                 }
                 const profissionais = await response.json();
-                profissionalSelect.innerHTML = '<option value="">Selecione um profissional</option>'; 
+                profissionalSelect.innerHTML = '<option value="">Selecione um profissional</option>';
                 profissionais.forEach(prof => {
                     const option = document.createElement('option');
                     option.value = prof.nome;
@@ -285,41 +272,47 @@
                 });
             } catch (error) {
                 profissionalSelect.innerHTML = '<option value="">Erro ao carregar</option>';
-                console.error('Erro ao buscar profissionais:', error); // Adicionei log
+                console.error('Erro ao buscar profissionais:', error);
             }
         }
 
         async function fetchAndRenderAgendamentos() {
             agendamentoListDiv.innerHTML = '<p>Carregando agendamentos...</p>';
-            const url = `/api/agendamentos?mes=${mesAtual + 1}&ano=${anoAtual}`;
+            
+            let url = `/api/agendamentos?mes=${mesAtual + 1}&ano=${anoAtual}`;
+            const searchTerm = agendamentoSearchInput.value.trim();
+            if (searchTerm) {
+                url += `&search=${encodeURIComponent(searchTerm)}`;
+            }
+
             try {
-                // MUDANÇA AQUI: Pega o token para a requisição autenticada
-                const token = localStorage.getItem('token'); 
+                const token = localStorage.getItem('token');
                 const response = await fetch(url, {
-                    headers: {
-                        'Authorization': `Bearer ${token}` // ADICIONA O CABEÇALHO DE AUTORIZAÇÃO
-                    }
+                    headers: { 'Authorization': `Bearer ${token}` }
                 });
-                // TRATAMENTO DO ERRO 401/403:
                 if (response.status === 401 || response.status === 403) {
                     console.error("Não autorizado ao buscar agendamentos. Redirecionando para login.");
-                    logoutUser(); 
-                    return; 
+                    logoutUser();
+                    return;
                 }
                 const agendamentos = await response.json();
                 agendamentosData = agendamentos;
                 agendamentoListDiv.innerHTML = '';
-                if (!Array.isArray(agendamentos) || agendamentos.length === 0) { // VERIFICA SE É ARRAY
+                if (!Array.isArray(agendamentos) || agendamentos.length === 0) {
                     agendamentoListDiv.innerHTML = `<p>Nenhum agendamento encontrado para ${currentMonthDisplay.textContent}.</p>`;
+                    if (searchTerm) {
+                         agendamentoListDiv.innerHTML = `<p>Nenhum agendamento encontrado para a busca "${searchTerm}".</p>`;
+                    }
                     return;
                 }
                 agendamentos.forEach(ag => {
                     const card = document.createElement('div');
                     card.className = 'client-card';
                     
-                    const dataAgendamentoObj = new Date(ag.dataAgendamento); // Objeto Date em UTC
-                    const dataFormatada = dataAgendamentoObj.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }); 
-                    const horaFormatada = dataAgendamentoObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); 
+                    // Ajuste para exibir a data no fuso horário local (cliente-side)
+                    const dataAgendamentoObj = new Date(ag.dataAgendamento); // Objeto Date em UTC do DB
+                    const dataFormatada = dataAgendamentoObj.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+                    const horaFormatada = dataAgendamentoObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
                     const nomesProcedimentos = ag.procedimentos.map(p => p.nome).join(', ');
                     const statusClass = `status-${(ag.status || 'pendente').toLowerCase().replace('ú', 'u')}`;
@@ -374,17 +367,32 @@
                  clientSearchResultsDiv.innerHTML = `<div class="search-result-item" style="color: #888;">Nenhum cliente encontrado.</div>`;
             }
         });
+
+        // NOVO: Event listener para o campo de busca de agendamentos
+        agendamentoSearchInput.addEventListener('input', () => {
+            // Quando o usuário digita na busca, resetamos o mês/ano para o atual
+            // para que a busca seja ampla, a menos que ele mude o mês depois.
+            // Ou, pode-se decidir manter o mês/ano atual se a busca for específica.
+            // Por simplicidade, vamos manter o mês/ano atual e filtrar dentro dele.
+            updateAll(); // Recarrega os agendamentos com o novo termo de busca
+        });
         
         agendamentoForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const editingId = agendamentoForm.dataset.editingId;
-            // Pegue os valores dos inputs de data e hora
-            const dataInput = document.getElementById('dataAgendamento').value; // Ex: "2025-07-15"
-            const horaInput = document.getElementById('horaAgendamento').value; // Ex: "20:00"
+            const dataInput = document.getElementById('dataAgendamento').value;
+            const horaInput = document.getElementById('horaAgendamento').value;
+
+            // CORREÇÃO: Cria a data/hora no fuso horário do Studio antes de enviar para o backend
+            const STUDIO_TIMEZONE = 'America/Sao_Paulo'; //
+            // Certifique-se de que moment.js esteja carregado para usar moment.tz
+            // Você precisará incluir a biblioteca moment-timezone.js no seu HTML (script src)
+            const dataAgendamentoLocal = moment.tz(`${dataInput}T${horaInput}:00`, 'YYYY-MM-DDTHH:mm:ss', STUDIO_TIMEZONE);
+            const dataAgendamentoUTC = dataAgendamentoLocal.toDate();
 
             const payload = {
                 cliente: selectedClientIdInput.value,
-                dataAgendamento: new Date(`${dataInput}T${horaInput}:00`), // Cria a data no fuso horário local
+                dataAgendamento: dataAgendamentoUTC, // Envia a data convertida para UTC
                 procedimentos: [...agendamentoForm.querySelectorAll('.procedimento-row')].map(row => ({ nome: row.querySelector('[name=procedimento_nome]').value, valor: parseCurrency(row.querySelector('[name=procedimento_valor]').value) })),
                 profissional: document.getElementById('profissional').value,
                 sala: document.getElementById('sala').value,
@@ -395,21 +403,19 @@
             const url = editingId ? `/api/agendamentos/${editingId}` : '/api/agendamentos';
             const method = editingId ? 'PUT' : 'POST';
             try {
-                // MUDANÇA AQUI: Pega o token para a requisição autenticada
-                const token = localStorage.getItem('token'); 
-                const response = await fetch(url, { 
-                    method: method, 
-                    headers: { 
+                const token = localStorage.getItem('token');
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}` // ADICIONA O CABEÇALHO DE AUTORIZAÇÃO
-                    }, 
-                    body: JSON.stringify(payload) 
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(payload)
                 });
-                // TRATAMENTO DO ERRO 401/403:
                 if (response.status === 401 || response.status === 403) {
                     console.error("Não autorizado ao salvar agendamento. Redirecionando para login.");
-                    logoutUser(); 
-                    return; 
+                    logoutUser();
+                    return;
                 }
                 const result = await response.json();
                 if (response.ok) {
@@ -435,22 +441,18 @@
             if (target.classList.contains('icon-delete')) {
                 if (confirm('Tem certeza que deseja excluir este agendamento?')) {
                     try {
-                        // MUDANÇA AQUI: Pega o token para a requisição autenticada
-                        const token = localStorage.getItem('token'); 
-                        const response = await fetch(`/api/agendamentos/${id}`, { 
+                        const token = localStorage.getItem('token');
+                        const response = await fetch(`/api/agendamentos/${id}`, {
                             method: 'DELETE',
-                            headers: { 
-                                'Authorization': `Bearer ${token}` // ADICIONA O CABEÇALHO DE AUTORIZAÇÃO
-                            }
+                            headers: { 'Authorization': `Bearer ${token}` }
                         });
-                        // TRATAMENTO DO ERRO 401/403:
                         if (response.status === 401 || response.status === 403) {
                             console.error("Não autorizado ao excluir agendamento. Redirecionando para login.");
-                            logoutUser(); 
-                            return; 
+                            logoutUser();
+                            return;
                         }
-                        const result = await response.json(); // Consumir a resposta mesmo se não for OK para alert
-                        if (response.ok) { alert(result.message); updateAll(); } else { alert(`Erro: ${result.message || 'Erro ao excluir o agendamento.'}`); } // Melhorar mensagem de erro
+                        const result = await response.json();
+                        if (response.ok) { alert(result.message); updateAll(); } else { alert(`Erro: ${result.message || 'Erro ao excluir o agendamento.'}`); }
                     } catch (error) { alert('Erro de conexão ao excluir.'); console.error("Erro de conexão ao excluir agendamento no frontend:", error); }
                 }
             }
@@ -462,24 +464,22 @@
                 
                 if (nextStatus) {
                     try {
-                        // MUDANÇA AQUI: Pega o token para a requisição autenticada
-                        const token = localStorage.getItem('token'); 
+                        const token = localStorage.getItem('token');
                         const response = await fetch(`/api/agendamentos/${id}/status`, {
                             method: 'PATCH',
-                            headers: { 
+                            headers: {
                                 'Content-Type': 'application/json',
-                                'Authorization': `Bearer ${token}` // ADICIONA O CABEÇALHO DE AUTORIZAÇÃO
+                                'Authorization': `Bearer ${token}`
                             },
                             body: JSON.stringify({ status: nextStatus })
                         });
-                        // TRATAMENTO DO ERRO 401/403:
                         if (response.status === 401 || response.status === 403) {
                             console.error("Não autorizado ao atualizar status. Redirecionando para login.");
-                            logoutUser(); 
-                            return; 
+                            logoutUser();
+                            return;
                         }
-                        const result = await response.json(); // Consumir a resposta
-                        if (response.ok) { alert(result.message); updateAll(); } else { alert(`Erro: ${result.message || 'Erro ao atualizar status.'}`); } // Melhorar mensagem de erro
+                        const result = await response.json();
+                        if (response.ok) { alert(result.message); updateAll(); } else { alert(`Erro: ${result.message || 'Erro ao atualizar status.'}`); }
                     }
                     catch (error) { alert('Erro de conexão.'); console.error("Erro de conexão ao atualizar status no frontend:", error); }
                 }
@@ -491,8 +491,7 @@
         fetchAndPopulateProfissionais();
 
         // --- INÍCIO DA LÓGICA DE INATIVIDADE ---
-        const INACTIVITY_TIME = 10 * 60 * 1000; // 10 minutos em milissegundos
-        // Se você quer 10 segundos para teste: const INACTIVITY_TIME = 10 * 1000; // 10 segundos
+        const INACTIVITY_TIME = 10 * 60 * 1000;
         let timeoutId;
 
         function startInactivityTimer() {
@@ -506,7 +505,7 @@
             }
         }
 
-        resetInactivityTimer(); // Inicia o temporizador quando a página carrega
+        resetInactivityTimer();
 
         document.addEventListener('mousemove', resetInactivityTimer);
         document.addEventListener('keypress', resetInactivityTimer);

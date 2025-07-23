@@ -9,6 +9,7 @@ function logoutUser() {
     localStorage.removeItem('token');
     localStorage.removeItem('companyName');
     localStorage.removeItem('userEmail'); // Limpa também o email do usuário se estiver armazenado
+    localStorage.removeItem('birthdayModalShownInSession'); 
     window.location.href = '/index.html'; // Redireciona para a página de login
 }
 

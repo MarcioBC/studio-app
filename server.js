@@ -48,6 +48,7 @@ const agendamentoRoutes = require('./routes/agendamentoRoutes');
 const transacaoRoutes = require('./routes/transacaoRoutes');
 const profissionalRoutes = require('./routes/profissionalRoutes'); // Nome do arquivo é 'profissionalRoutes.js'
 const userRoutes = require('./routes/userRoutes');
+const aniversariantesRoutes = require('./routes/aniversariantes');
 
 // --- ROTAS PÚBLICAS (NÃO PRECISAM DE LOGIN NEM DE 'protect') ---
 app.use('/api/auth', authRoutes); 
@@ -55,6 +56,7 @@ app.use('/api/companies', companyRoutes);
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html'))); 
 app.get('/register.html', (req, res) => res.sendFile(path.join(__dirname, 'public', 'register.html')));
 app.get('/register-company.html', (req, res) => res.sendFile(path.join(__dirname, 'public', 'register-company.html')));
+app.use('/api', aniversariantesRoutes); // A rota completa será /api/aniversariantes-do-dia
 
 // --- ROTAS PROTEGIDAS (APLIQUE O 'protect' DIRETAMENTE AQUI) ---
 // Adicionando a rota /api/dashboard que fornecerá TODOS os dados para o Dashboard HTML
