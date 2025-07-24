@@ -133,29 +133,7 @@ input[type="text"], input[type="tel"], input[type="date"], input[type="time"], s
 .header h1 {
     margin: 0;
     flex-shrink: 0; 
-    /* flex-grow: 1;  Removido, não queremos que o h1 cresça muito */
     font-size: 2em; /* Tamanho padrão do título */
-}
-
-/* NOVO: Container para a busca e os botões no cabeçalho */
-.header-controls { 
-    display: flex;
-    flex-grow: 1; /* Permite que este container ocupe o espaço restante */
-    align-items: center; /* Alinha os itens (busca e actions) verticalmente */
-    gap: 15px; /* Espaçamento entre a busca e os botões */
-    flex-wrap: wrap; /* Quebra linha se necessário */
-    justify-content: flex-end; /* Alinha o conteúdo à direita por padrão */
-}
-
-/* Estilo para o campo de busca dentro do cabeçalho */
-.filter-container.header-search { 
-    flex-grow: 1; /* Permite que o campo de busca preencha o espaço */
-    min-width: 200px; /* Largura mínima para o campo de busca */
-    margin-bottom: 0; /* Remove margin-bottom padrão */
-    /* Removido max-width, ele deve crescer dentro do header-controls */
-}
-.filter-container.header-search input {
-    width: 100%;
 }
 
 .header-actions {
@@ -163,7 +141,6 @@ input[type="text"], input[type="tel"], input[type="date"], input[type="time"], s
     gap: 10px; /* Espaçamento entre os botões */
     flex-shrink: 0; 
     flex-wrap: wrap; 
-    /* justify-content: flex-end; Removido, já é tratado pelo parent header-controls */
 }
 
 /* NOVO: Estilos para o campo de busca quando está na lista (novo local) */
@@ -334,30 +311,28 @@ input[type="text"], input[type="tel"], input[type="date"], input[type="time"], s
 
 /* Responsividade */
 @media (max-width: 768px) {
+    /* CABEÇALHO GERAL: Alinhar à esquerda em mobile */
     .header {
-        flex-direction: column; /* Coloca os itens em coluna */
-        align-items: stretch; /* Estica os itens para a largura total */
-        gap: 10px; /* Reduz o espaçamento */
+        flex-direction: column; /* Organiza em coluna */
+        align-items: flex-start; /* **Alinha tudo à esquerda** */
+        gap: 10px; 
+        padding-right: 20px; /* Adiciona um padding para a direita se o padding padrão for só na esquerda */
     }
     .header h1 {
-        text-align: center;
+        text-align: left; /* Garante que o texto do título também esteja à esquerda */
         width: 100%;
-        font-size: 1.8em; 
-    }
-    .header-controls { /* NOVO */
-        flex-direction: column; 
-        width: 100%;
-        gap: 10px;
-        align-items: stretch; 
-    }
-    .filter-container.header-search { /* NOVO */
-        min-width: unset; 
-        width: 100%; 
+        font-size: 1.5em; /* **Reduz o tamanho da fonte do título** */
+        margin-left: 0; /* Garante que não haja margem extra à esquerda */
     }
     .header-actions {
         width: 100%;
-        justify-content: center; 
+        justify-content: flex-start; /* **Alinha os botões à esquerda** */
     }
+    .header-actions button {
+        font-size: 0.9em; /* Opcional: reduzir um pouco a fonte dos botões se parecerem grandes */
+        padding: 8px 12px;
+    }
+
     /* Ajustes para o calendário em telas pequenas */
     .calendar-wrapper {
         position: fixed; 
@@ -385,8 +360,12 @@ input[type="text"], input[type="tel"], input[type="date"], input[type="time"], s
         font-size: 0.8em;
     }
 
-    /* NOVO: Ajuste para o campo de busca na lista em mobile */
+    /* Ajuste para o campo de busca na lista em mobile */
     .list-search-container {
-        margin-top: 10px; /* Espaçamento adicional se necessário */
+        margin-top: 10px; 
+        padding-right: 20px; /* Adiciona um padding para a direita se o padding padrão for só na esquerda */
+    }
+    .list-search-container input {
+        font-size: 0.9em; /* Opcional: reduzir a fonte do input de busca */
     }
 }
