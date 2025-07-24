@@ -74,7 +74,11 @@
         </div>
     </div>
     <script src="/js/main.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment-timezone/0.5.34/moment-timezone-with-data.min.js"></script>
     <script>
+    const STUDIO_TIMEZONE = 'America/Sao_Paulo'; // Adicionado para consistência
+
     document.addEventListener('DOMContentLoaded', () => {
         // --- Lógica para carregar o nome da empresa dinamicamente ---
         const companyName = localStorage.getItem('companyName');
@@ -149,6 +153,7 @@
                 const data = await response.json();
                 console.log("dashboard.html: Dados do dashboard recebidos:", data);
 
+                // As contagens já vêm do backend corretamente formatadas, não precisam de ajuste de fuso aqui.
                 agendamentosHojeCountEl.textContent = data.agendamentosHojeCount || 0;
                 agendamentosSemanaCountEl.textContent = data.agendamentosSemanaCount || 0;
                 agendamentosConfirmadosCountEl.textContent = data.agendamentosConfirmadosCount || 0;
@@ -157,12 +162,16 @@
                 agendamentosDoDiaListEl.innerHTML = '';
                 if (Array.isArray(data.agendamentosDoDiaList) && data.agendamentosDoDiaList.length > 0) {
                     data.agendamentosDoDiaList.forEach(ag => {
-                        const item = document.createElement('div');
-                        item.className = 'activity-item'; // Use a classe existente para estilizar os itens da lista
-                        const dataAgendamentoObj = new Date(ag.dataAgendamento);
-                        const dataFormatada = dataAgendamentoObj.toLocaleDateString('pt-BR');
-                        const horaFormatada = dataAgendamentoObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                        // --- CORREÇÃO: Usar moment-timezone para exibir a data/hora no fuso do estúdio ---
+                        // ag.dataAgendamento vem como uma string ISO de data/hora UTC do backend
+                        const agendamentoMomentLocal = moment.utc(ag.dataAgendamento).tz(STUDIO_TIMEZONE);
+                        
+                        const dataFormatada = agendamentoMomentLocal.format('DD/MM/YYYY');
+                        const horaFormatada = agendamentoMomentLocal.format('HH:mm');
+                        // --- FIM DA CORREÇÃO ---
 
+                        const item = document.createElement('div');
+                        item.className = 'activity-item'; 
                         item.innerHTML = `
                             <p><strong>${ag.cliente ? ag.cliente.nome : 'Cliente Removido'}</strong></p>
                             <p>${ag.procedimentos.map(p => p.nome).join(', ')}</p>
@@ -263,9 +272,12 @@
                     data.forEach(client => {
                         const clientDiv = document.createElement('div');
                         clientDiv.className = 'birthday-item';
-                        const dataNascimentoObj = new Date(client.dataNascimento);
-                        const diaNascimento = String(dataNascimentoObj.getDate()).padStart(2, '0');
-                        const mesNascimento = String(dataNascimentoObj.getMonth() + 1).padStart(2, '0');
+                        // --- CORREÇÃO: Usar moment-timezone para exibir a data de nascimento corretamente ---
+                        // A data de nascimento pode vir sem informações de hora/fuso, então focamos no dia e mês
+                        const dataNascimentoMoment = moment.utc(client.dataNascimento).tz(STUDIO_TIMEZONE);
+                        const diaNascimento = dataNascimentoMoment.format('DD');
+                        const mesNascimento = dataNascimentoMoment.format('MM');
+                        // --- FIM DA CORREÇÃO ---
 
                         clientDiv.innerHTML = `
                             <p><strong>${client.nome}</strong></p>

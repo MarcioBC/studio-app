@@ -1,27 +1,32 @@
+# Arquivos de ambiente
 .env
+.env.local
+.env.*.local
+
+# Dependências do Node (se for um projeto Node.js)
+node_modules/
+
 # Logs
-logs
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-lerna-debug.log*
 
-# Dependency directories
-node_modules/
+# Resultados de build (se for um projeto frontend/backend que gera uma pasta de build)
+/dist
+/build
+/out
+/coverage
 
-# production
-dist/
-build/
+# Arquivos de IDE (ex: VS Code, Intellij)
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
 
-# Environment variables
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-
-# OS generated files
+# Arquivos de sistema operacional
 .DS_Store
 Thumbs.db
-.vscode/ # VScode specific files
+
+# Se você usa alguma pasta de upload de arquivos (ex: public/uploads/)
+# public/uploads/

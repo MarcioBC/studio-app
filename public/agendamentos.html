@@ -33,22 +33,30 @@
         <main class="main-content">
             <header class="header">
                 <h1>Gerenciamento de Agendamentos</h1>
-                <button class="btn-primary" id="novoAgendamentoBtn">Novo Agendamento</button>
+                <div class="header-actions">
+                    <button class="btn-primary" id="novoAgendamentoBtn">Novo Agendamento</button>
+                    <button class="btn-secondary" id="toggleCalendarBtn">📅 Ver Calendário</button>
+                </div>
             </header>
 
-            <div class="filter-and-month-container">
-                <div class="filter-container">
-                    <input type="text" id="agendamentoSearchInput" placeholder="Buscar agendamento por nome, data (DD/MM/AAAA), profissional, sala, procedimento..." autocomplete="off">
-                </div>
-                <div class="month-navigation-controls">
-                    <button id="prevMonthBtn">&lt;</button>
-                    <h3 id="currentMonthDisplay"></h3>
-                    <button id="nextMonthBtn">&gt;</button>
+            <div id="calendarContainer" class="calendar-wrapper" style="display: none;">
+                <div class="calendar-controls">
+                    <div class="month-navigation-controls">
+                        <button id="prevMonthBtn">&lt;</button>
+                        <h3 id="currentMonthYearDisplay"></h3>
+                        <button id="nextMonthBtn">&gt;</button>
+                    </div>
+                    <div id="calendarGrid" class="calendar-grid">
+                        </div>
+                    <button class="btn-secondary" id="closeCalendarBtn" style="margin-top: 15px;">Fechar Calendário</button>
                 </div>
             </div>
 
             <section class="client-list-container">
-                <h2 id="listTitle">Agendamentos do Mês</h2>
+                <h2 id="listTitle">Agendamentos do Dia</h2>
+                <div class="list-search-container">
+                    <input type="text" id="agendamentoSearchInput" placeholder="Buscar agendamento por nome, profissional, sala, procedimento..." autocomplete="off">
+                </div>
                 <div id="agendamentoList">
                     <p>Carregando agendamentos...</p>
                 </div>
@@ -125,14 +133,18 @@
         }
     
         let allClients = [];
-        let agendamentosData = [];
-        let dataAtual = new Date();
-        let anoAtual = dataAtual.getFullYear();
-        let mesAtual = dataAtual.getMonth();
+        let agendamentosData = []; // Agora armazena dados para o DIA atualmente selecionado
+        let todayDate = new Date(); // Referência fixa para o dia de hoje
+        // currentCalendarMonth: Objeto Date para o MÊS atualmente exibido no calendário
+        let currentCalendarMonth = new Date(todayDate.getFullYear(), todayDate.getMonth(), 1); 
+        // currentSelectedDate: Objeto Date para o DIA atualmente selecionado (clicado) no calendário
+        let currentSelectedDate = new Date(todayDate.getFullYear(), todayDate.getMonth(), todayDate.getDate()); 
+        let daysWithAppointmentsInMonth = new Set(); // Armazenará os dias com agendamentos do mês atual
 
         const prevMonthBtn = document.getElementById('prevMonthBtn');
         const nextMonthBtn = document.getElementById('nextMonthBtn');
-        const currentMonthDisplay = document.getElementById('currentMonthDisplay');
+        const currentMonthYearDisplay = document.getElementById('currentMonthYearDisplay'); 
+        const calendarGrid = document.getElementById('calendarGrid'); 
         const agendamentoListDiv = document.getElementById('agendamentoList');
         const modal = document.getElementById('agendamentoModal');
         const novoAgendamentoBtn = document.getElementById('novoAgendamentoBtn');
@@ -151,15 +163,111 @@
         const profissionalSelect = document.getElementById('profissional');
 
         const agendamentoSearchInput = document.getElementById('agendamentoSearchInput');
-        
+        const listTitle = document.getElementById('listTitle'); 
+
+        // Elementos para controlar o calendário ocultável
+        const toggleCalendarBtn = document.getElementById('toggleCalendarBtn');
+        const calendarContainer = document.getElementById('calendarContainer');
+        const closeCalendarBtn = document.getElementById('closeCalendarBtn');
+
         const formatAsCurrency = (value) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
         const parseCurrency = (value) => parseFloat(String(value).replace('R$', '').replace(/\./g, '').replace(',', '.')) || 0;
 
-        function updateMonthDisplay() {
-            const data = new Date(anoAtual, mesAtual);
-            const nomeMes = data.toLocaleString('pt-BR', { month: 'long' });
-            currentMonthDisplay.textContent = `${nomeMes.charAt(0).toUpperCase() + nomeMes.slice(1)} de ${anoAtual}`;
+        const formatDateToYYYYMMDD = (date) => {
+            const year = date.getFullYear();
+            const month = (date.getMonth() + 1).toString().padStart(2, '0');
+            const day = date.getDate().toString().padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        };
+        
+        function updateCalendarHeaderDisplay() {
+            const nomeMes = currentCalendarMonth.toLocaleString('pt-BR', { month: 'long' });
+            currentMonthYearDisplay.textContent = `${nomeMes.charAt(0).toUpperCase() + nomeMes.slice(1)} de ${currentCalendarMonth.getFullYear()}`;
         }
+
+        async function fetchDaysWithAppointments(month, year) {
+            try {
+                const token = localStorage.getItem('token'); 
+                const response = await fetch(`/api/agendamentos/datas-com-agendamento?mes=${month + 1}&ano=${year}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (response.status === 401 || response.status === 403) { logoutUser(); return; }
+                const days = await response.json();
+                daysWithAppointmentsInMonth = new Set(days);
+            } catch (error) {
+                console.error('Erro ao buscar dias com agendamento:', error);
+                daysWithAppointmentsInMonth = new Set(); // Limpa em caso de erro
+            }
+        }
+
+        async function renderCalendar() { 
+            calendarGrid.innerHTML = ''; 
+            updateCalendarHeaderDisplay();
+
+            await fetchDaysWithAppointments(currentCalendarMonth.getMonth(), currentCalendarMonth.getFullYear());
+
+            const weekdays = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+            weekdays.forEach(day => {
+                const header = document.createElement('div');
+                header.className = 'calendar-day-header';
+                header.textContent = day;
+                calendarGrid.appendChild(header);
+            });
+
+            const firstDayOfMonth = new Date(currentCalendarMonth.getFullYear(), currentCalendarMonth.getMonth(), 1);
+            const daysInMonth = new Date(currentCalendarMonth.getFullYear(), currentCalendarMonth.getMonth() + 1, 0).getDate();
+            
+            const startDay = firstDayOfMonth.getDay(); 
+
+            for (let i = 0; i < startDay; i++) {
+                const emptyDay = document.createElement('div');
+                emptyDay.className = 'calendar-day empty';
+                calendarGrid.appendChild(emptyDay);
+            }
+
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dayElement = document.createElement('div');
+                dayElement.className = 'calendar-day';
+                dayElement.textContent = day;
+                
+                const dayDate = new Date(currentCalendarMonth.getFullYear(), currentCalendarMonth.getMonth(), day);
+                
+                // Comparar apenas a data para 'past-day'
+                // Resetar a hora para 00:00:00 para uma comparação precisa da data
+                const todayMidnight = new Date(todayDate.getFullYear(), todayDate.getMonth(), todayDate.getDate());
+                const dayDateMidnight = new Date(dayDate.getFullYear(), dayDate.getMonth(), dayDate.getDate());
+
+                if (dayDateMidnight < todayMidnight) { 
+                    dayElement.classList.add('past-day');
+                }
+
+                if (dayDate.toDateString() === todayDate.toDateString()) {
+                    dayElement.classList.add('today');
+                }
+                if (dayDate.toDateString() === currentSelectedDate.toDateString()) {
+                    dayElement.classList.add('selected');
+                }
+                if (daysWithAppointmentsInMonth.has(day)) {
+                    dayElement.classList.add('has-appointments');
+                }
+
+                dayElement.addEventListener('click', () => selectDay(dayDate));
+                calendarGrid.appendChild(dayElement);
+            }
+        }
+
+        function selectDay(date) {
+            currentSelectedDate = date; 
+            // Ao selecionar um dia, limpa o campo de busca de texto
+            agendamentoSearchInput.value = ''; 
+            renderCalendar(); 
+            fetchAndRenderAgendamentos(currentSelectedDate); 
+            const selectedDateFormatted = currentSelectedDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+            listTitle.textContent = `Agendamentos para ${selectedDateFormatted}`;
+
+            calendarContainer.style.display = 'none';
+        }
+
 
         function addProcedimentoRow(isFirst = false, procedimento = { nome: '', valor: 0 }) {
             const row = document.createElement('div');
@@ -192,6 +300,10 @@
             procedimentosContainer.innerHTML = '';
             addProcedimentoRow(true);
             updateTotalValue();
+            // --- CORREÇÃO: Campos de data e hora em branco ---
+            document.getElementById('dataAgendamento').value = ''; // Limpa o campo de data
+            document.getElementById('horaAgendamento').value = ''; // Limpa o campo de hora
+            // --- FIM DA CORREÇÃO ---
         }
 
         function openNewModal() {
@@ -201,8 +313,12 @@
         }
 
         function openEditModal(agendamentoId) {
-            const ag = agendamentosData.find(a => a._id === agendamentoId);
-            if (!ag) return;
+            const ag = agendamentosData.find(a => a._id === agendamentoId); 
+            if (!ag) {
+                alert('Agendamento não encontrado para edição. Recarregando a página pode ajudar.');
+                console.error(`Agendamento com ID ${agendamentoId} não encontrado na lista atual.`);
+                return;
+            }
             resetModalForm();
             agendamentoForm.setAttribute('data-editing-id', agendamentoId);
             modalTitle.textContent = 'Editar Agendamento';
@@ -212,18 +328,13 @@
             selectedClientIdInput.value = ag.cliente._id;
             selectedClientNameSpan.textContent = ag.cliente.nome;
             
-            const dataAgendamentoObj = new Date(ag.dataAgendamento);
-            const localTimeMs = dataAgendamentoObj.getTime() - (dataAgendamentoObj.getTimezoneOffset() * 60 * 1000);
-            const localDate = new Date(localTimeMs);
+            // --- CORREÇÃO: Usar moment-timezone para converter a data UTC para a timezone do estúdio ---
+            // ag.dataAgendamento vem como uma string ISO de data/hora UTC do backend
+            const agendamentoMomentLocal = moment.utc(ag.dataAgendamento).tz(STUDIO_TIMEZONE);
 
-            const ano = localDate.getFullYear();
-            const mes = (localDate.getMonth() + 1).toString().padStart(2, '0');
-            const dia = localDate.getDate().toString().padStart(2, '0');
-            document.getElementById('dataAgendamento').value = `${ano}-${mes}-${dia}`;
-            
-            const horas = localDate.getHours().toString().padStart(2, '0');
-            const minutos = localDate.getMinutes().toString().padStart(2, '0');
-            document.getElementById('horaAgendamento').value = `${horas}:${minutos}`;
+            document.getElementById('dataAgendamento').value = agendamentoMomentLocal.format('YYYY-MM-DD');
+            document.getElementById('horaAgendamento').value = agendamentoMomentLocal.format('HH:mm');
+            // --- FIM DA CORREÇÃO ---
 
             document.getElementById('profissional').value = ag.profissional;
             document.getElementById('sala').value = ag.sala;
@@ -279,25 +390,24 @@
             }
         }
 
-        async function fetchAndRenderAgendamentos() {
+        async function fetchAndRenderAgendamentos(dateToFilterByCalendar = null) {
             agendamentoListDiv.innerHTML = '<p>Carregando agendamentos...</p>';
             
             let searchTerm = agendamentoSearchInput.value.trim();
-            let formattedSearchTerm = searchTerm;
+            let url;
 
-            const dateRegexDDMMYYYY = /^(\d{2})\/(\d{2})\/(\d{4})$/;
-            if (dateRegexDDMMYYYY.test(searchTerm)) {
-                const parts = searchTerm.match(dateRegexDDMMYYYY);
-                formattedSearchTerm = `${parts[3]}-${parts[2]}-${parts[1]}`;
-                console.log(`Frontend: Termo de busca de data "${searchTerm}" convertido para: ${formattedSearchTerm}`);
-            } else if (searchTerm && !/^\d{4}-\d{2}-\d{2}$/.test(searchTerm)) {
-                console.log(`Frontend: Termo de busca de texto: "${searchTerm}"`);
-            }
-
-            let url = `/api/agendamentos?mes=${mesAtual + 1}&ano=${anoAtual}`;
             if (searchTerm) {
-                url += `&search=${encodeURIComponent(formattedSearchTerm)}`;
+                const mes = currentCalendarMonth.getMonth() + 1;
+                const ano = currentCalendarMonth.getFullYear();
+                url = `/api/agendamentos?mes=${mes}&ano=${ano}&search=${encodeURIComponent(searchTerm)}`;
+                listTitle.textContent = `Resultados da busca "${searchTerm}" em ${currentCalendarMonth.toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}`;
+            } else {
+                const formattedDateForAPI = formatDateToYYYYMMDD(dateToFilterByCalendar || currentSelectedDate); 
+                url = `/api/agendamentos?data=${formattedDateForAPI}`;
+                const formattedDateForDisplay = (dateToFilterByCalendar || currentSelectedDate).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+                listTitle.textContent = `Agendamentos para ${formattedDateForDisplay}`;
             }
+            
             console.log("Frontend: URL da requisição de agendamentos:", url);
 
             try {
@@ -311,12 +421,12 @@
                     return;
                 }
                 const agendamentos = await response.json();
-                agendamentosData = agendamentos;
+                agendamentosData = agendamentos; 
                 agendamentoListDiv.innerHTML = '';
                 if (!Array.isArray(agendamentos) || agendamentos.length === 0) {
-                    let message = `Nenhum agendamento encontrado para ${currentMonthDisplay.textContent}.`;
+                    let message = `Nenhum agendamento encontrado para a seleção atual.`;
                     if (searchTerm) {
-                         message = `Nenhum agendamento encontrado para a busca "${searchTerm}".`;
+                         message = `Nenhum agendamento encontrado para a busca "${searchTerm}" neste mês.`;
                     }
                     agendamentoListDiv.innerHTML = `<p>${message}</p>`;
                     return;
@@ -330,28 +440,41 @@
                     const horaFormatada = dataAgendamentoObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
                     const nomesProcedimentos = ag.procedimentos.map(p => p.nome).join(', ');
-                   const normalizeStatus = (str) => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-const statusClass = `status-${normalizeStatus(ag.status || 'pendente')}`;
+                    const normalizeStatus = (str) => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+                    const statusClass = `status-${normalizeStatus(ag.status || 'pendente')}`;
 
-                    // RESTAURAÇÃO E CORREÇÃO: Renderiza o span de status e action-icons sempre
                     card.innerHTML = `<div style="flex: 1;"><strong>${dataFormatada} às ${horaFormatada}</strong> - ${ag.cliente ? ag.cliente.nome : 'Cliente Removido'}<br><small><b>Procedimentos:</b> ${nomesProcedimentos}</small><br><small><b>Profissional:</b> ${ag.profissional} - <b>Sala:</b> ${ag.sala}</small></div><div style="text-align: right;"><span class="status ${statusClass}" data-id="${ag._id}" data-status="${ag.status}">${ag.status}</span><p style="margin:10px 0 0 0; font-weight: bold;">${formatAsCurrency(ag.valorTotal)}</p><div class="action-icons" style="margin-top: 10px;"><span class="icon-edit" data-id="${ag._id}" title="Editar">✏️</span><span class="icon-delete" data-id="${ag._id}" title="Excluir">🗑️</span></div></div>`;
                     agendamentoListDiv.appendChild(card);
                 });
-                // Os event listeners para status, editar e excluir serão adicionados
-                // via event delegation, fora deste loop, mais abaixo no script.
             } catch (error) {
                 agendamentoListDiv.innerHTML = '<p style="color: red;">Erro ao carregar os agendamentos.</p>';
                 console.error("Erro ao carregar os agendamentos no frontend:", error);
             }
         }
         
-        function updateAll() {
-            updateMonthDisplay();
-            fetchAndRenderAgendamentos();
-        }
+        prevMonthBtn.addEventListener('click', () => {
+            currentCalendarMonth.setMonth(currentCalendarMonth.getMonth() - 1);
+            const newSelectedDate = new Date(currentCalendarMonth.getFullYear(), currentCalendarMonth.getMonth(), 1);
+            selectDay(newSelectedDate); 
+        });
+        
+        nextMonthBtn.addEventListener('click', () => {
+            currentCalendarMonth.setMonth(currentCalendarMonth.getMonth() + 1);
+            const newSelectedDate = new Date(currentCalendarMonth.getFullYear(), currentCalendarMonth.getMonth(), 1);
+            selectDay(newSelectedDate); 
+        });
 
-        prevMonthBtn.addEventListener('click', () => { mesAtual--; if (mesAtual < 0) { mesAtual = 11; anoAtual--; } updateAll(); });
-        nextMonthBtn.addEventListener('click', () => { mesAtual++; if (mesAtual > 11) { mesAtual = 0; anoAtual++; } updateAll(); });
+        toggleCalendarBtn.addEventListener('click', () => {
+            calendarContainer.style.display = calendarContainer.style.display === 'none' ? 'flex' : 'none';
+            if (calendarContainer.style.display === 'flex') {
+                renderCalendar(); 
+            }
+        });
+        closeCalendarBtn.addEventListener('click', () => {
+            calendarContainer.style.display = 'none';
+        });
+
+
         novoAgendamentoBtn.addEventListener('click', openNewModal);
         closeModalBtn.addEventListener('click', () => { modal.style.display = 'none'; resetModalForm(); });
         cancelBtn.addEventListener('click', () => { modal.style.display = 'none'; resetModalForm(); });
@@ -389,7 +512,7 @@ const statusClass = `status-${normalizeStatus(ag.status || 'pendente')}`;
         });
 
         agendamentoSearchInput.addEventListener('input', () => {
-            updateAll();
+            fetchAndRenderAgendamentos(null); 
         });
         
         agendamentoForm.addEventListener('submit', async (e) => {
@@ -398,14 +521,12 @@ const statusClass = `status-${normalizeStatus(ag.status || 'pendente')}`;
             const dataInput = document.getElementById('dataAgendamento').value;
             const horaInput = document.getElementById('horaAgendamento').value;
 
-            // --- CORREÇÃO AQUI: Usando moment-timezone para criar a data UTC ---
             const localDateTimeString = `${dataInput}T${horaInput}:00`;
             if (!moment(localDateTimeString).isValid()) {
                 alert("Por favor, insira uma data e hora válidas para o agendamento.");
                 return;
             }
             const dataAgendamentoUTC = moment.tz(localDateTimeString, STUDIO_TIMEZONE).toISOString();
-            // --- FIM DA CORREÇÃO ---
 
             const payload = {
                 cliente: selectedClientIdInput.value,
@@ -438,7 +559,8 @@ const statusClass = `status-${normalizeStatus(ag.status || 'pendente')}`;
                 if (response.ok) {
                     alert(result.message);
                     modal.style.display = 'none';
-                    updateAll();
+                    renderCalendar(); 
+                    fetchAndRenderAgendamentos(currentSelectedDate); 
                 } else {
                     alert(`Erro: ${result.message}`);
                 }
@@ -448,29 +570,25 @@ const statusClass = `status-${normalizeStatus(ag.status || 'pendente')}`;
             }
         });
 
-        // --- CORREÇÃO: Listener para mudança de status, edição e exclusão usando Event Delegation ---
-        // Este listener é mais eficiente e funciona para elementos adicionados dinamicamente
         agendamentoListDiv.addEventListener('click', async (e) => {
             const target = e.target;
-            // Tenta encontrar o 'data-id' do elemento clicado ou de um pai próximo
             const agendamentoId = target.dataset.id || target.closest('[data-id]')?.dataset.id;
 
-            if (!agendamentoId) return; // Se o clique não foi em um elemento com data-id, ignora
+            if (!agendamentoId) return;
 
-            // Lógica para mudança de status
-            if (target.classList.contains('status')) { // AQUI é o span de status
+            if (target.classList.contains('status')) { 
                 const currentStatus = target.dataset.status;
                 let nextStatus;
 
                 switch (currentStatus) {
                     case 'Pendente': nextStatus = 'Confirmado'; break;
                     case 'Confirmado': nextStatus = 'Concluído'; break;
-                    case 'Concluído': nextStatus = 'Pendente'; break; // Ciclo
-                    case 'Cancelado': nextStatus = 'Pendente'; break; // Exemplo de reativação
+                    case 'Concluído': nextStatus = 'Pendente'; break;
+                    case 'Cancelado': nextStatus = 'Pendente'; break; 
                     default: nextStatus = 'Pendente';
                 }
 
-                if (!nextStatus) return; // Evita requisição se nextStatus não for definido
+                if (!nextStatus) return;
 
                 const token = localStorage.getItem('token');
                 if (!token) { logoutUser(); return; }
@@ -489,17 +607,16 @@ const statusClass = `status-${normalizeStatus(ag.status || 'pendente')}`;
                     }
 
                     alert(`Status do agendamento atualizado para: ${nextStatus}`);
-                    updateAll(); // Recarrega a lista para refletir a mudança
+                    renderCalendar(); 
+                    fetchAndRenderAgendamentos(currentSelectedDate); 
                 } catch (error) {
-                    console.error("Erro ao atualizar status do agendamento:", error);
+                    console.error("Erro ao atualizar status:", error);
                     alert("Erro ao atualizar status: " + error.message);
                 }
             }
-            // Lógica para editar
             else if (target.classList.contains('icon-edit')) {
                 openEditModal(agendamentoId);
             }
-            // Lógica para excluir
             else if (target.classList.contains('icon-delete')) {
                 if (confirm('Tem certeza que deseja excluir este agendamento?')) {
                     try {
@@ -510,14 +627,20 @@ const statusClass = `status-${normalizeStatus(ag.status || 'pendente')}`;
                         });
                         if (response.status === 401 || response.status === 403) { logoutUser(); return; }
                         const result = await response.json();
-                        if (response.ok) { alert(result.message); updateAll(); } else { alert(`Erro: ${result.message || 'Erro ao excluir o agendamento.'}`); }
+                        if (response.ok) { 
+                            alert(result.message); 
+                            renderCalendar();
+                            fetchAndRenderAgendamentos(currentSelectedDate); 
+                        } else { 
+                            alert(`Erro: ${result.message || 'Erro ao excluir o agendamento.'}`); 
+                        }
                     } catch (error) { alert('Erro de conexão ao excluir.'); console.error("Erro de conexão ao excluir agendamento no frontend:", error); }
                 }
             }
         });
-        // --- FIM DA CORREÇÃO DE EVENT DELEGATION ---
         
-        updateAll();
+        // Chamadas de configuração inicial
+        fetchAndRenderAgendamentos(currentSelectedDate); 
         fetchAllClients();
         fetchAndPopulateProfissionais();
 
@@ -535,8 +658,6 @@ const statusClass = `status-${normalizeStatus(ag.status || 'pendente')}`;
                 startInactivityTimer();
             }
         }
-
-        resetInactivityTimer();
 
         document.addEventListener('mousemove', resetInactivityTimer);
         document.addEventListener('keypress', resetInactivityTimer);

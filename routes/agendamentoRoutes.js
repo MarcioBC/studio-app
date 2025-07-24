@@ -5,60 +5,69 @@ const router = express.Router();
 const Agendamento = require('../models/Agendamento.js');
 const Cliente = require('../models/Cliente.js'); // Necessário para o $lookup no aggregation
 const Transacao = require('../models/Transacao.js'); // Usado em outras rotas
-const moment = require('moment-timezone'); // IMPORTANTE: Adicione esta linha!
-const mongoose = require('mongoose'); // IMPORTANTE: Adicione esta linha para usar mongoose.Types.ObjectId
+const moment = require('moment-timezone'); 
+const mongoose = require('mongoose'); 
 
 // Defina o fuso horário do seu Studio para Sorocaba
 const STUDIO_TIMEZONE = 'America/Sao_Paulo';
 
-// ROTA GET PRINCIPAL - FILTRA POR MÊS, ANO E NOVOS CRITÉRIOS DE BUSCA USANDO AGGREGATION
+// ROTA GET PRINCIPAL - FILTRA POR DIA OU MÊS E NOVOS CRITÉRIOS DE BUSCA USANDO AGGREGATION
 router.get('/', async (req, res) => {
     try {
-        const { mes, ano, search } = req.query;
-        let matchQuery = { companyId: new mongoose.Types.ObjectId(req.user.companyId) }; // Usa ObjectId para companyId
-        let sortOption = { dataAgendamento: -1 }; // PADRÃO: DO MAIS RECENTE PARA O MAIS ANTIGO
+        // Agora o frontend envia 'data' para filtro por dia, e 'search' para busca por texto.
+        const { data, mes, ano, search } = req.query; 
+        let matchQuery = { companyId: new mongoose.Types.ObjectId(req.user.companyId) }; 
+        let sortOption = { dataAgendamento: 1 }; // PADRÃO: DO MAIS ANTIGO PARA O MAIS RECENTE (útil para listagens diárias)
 
-        // 1. Filtrar por Mês e Ano (lógica existente, ajustada para matchQuery)
-        if (mes && ano) {
+        // 1. Filtrar por Data Específica (prioridade mais alta se 'data' for fornecida)
+        if (data) {
+            // Interpreta a 'data' (YYYY-MM-DD) no fuso horário do Studio e cria um range de 24h
+            const dataLocal = moment.tz(data, STUDIO_TIMEZONE);
+            if (!dataLocal.isValid()) {
+                return res.status(400).json({ message: 'Formato de data inválido. Use YYYY-MM-DD.' });
+            }
+            const startOfDayUTC = dataLocal.startOf('day').toDate();
+            const endOfDayUTC = dataLocal.endOf('day').toDate();
+            
+            matchQuery.dataAgendamento = { $gte: startOfDayUTC, $lte: endOfDayUTC };
+            console.log(`Backend: Filtrando por DIA específico entre ${startOfDayUTC.toISOString()} e ${endOfDayUTC.toISOString()}`);
+        } 
+        // 2. Filtrar por Mês e Ano (se 'data' não for fornecida)
+        else if (mes && ano) { // Esta condição será menos usada com o novo frontend
             const mesNumero = parseInt(mes, 10);
             const anoNumero = parseInt(ano, 10);
 
-            // Calcula o início e o fim do mês no fuso horário do Studio e converte para UTC
-            // Isso garante que o dia 1 do mês e o último dia do mês são corretos localmente
             const dataInicioLocal = moment.tz(`${anoNumero}-${String(mesNumero).padStart(2, '0')}-01`, STUDIO_TIMEZONE).startOf('month');
             const dataFimLocal = moment.tz(`${anoNumero}-${String(mesNumero).padStart(2, '0')}-01`, STUDIO_TIMEZONE).endOf('month');
 
-            const dataInicioUTC = dataInicioLocal.toDate(); // Converte para Date object (UTC)
-            const dataFimUTC = dataFimLocal.toDate();     // Converte para Date object (UTC)
+            const dataInicioUTC = dataInicioLocal.toDate(); 
+            const dataFimUTC = dataFimLocal.toDate();     
             
             matchQuery.dataAgendamento = { $gte: dataInicioUTC, $lte: dataFimUTC };
+            console.log(`Backend: Filtrando por MÊS e ANO entre ${dataInicioUTC.toISOString()} e ${dataFimUTC.toISOString()}`);
+        }
+        // Se nenhum filtro de data for fornecido (não esperado com o novo frontend, mas fallback)
+        else {
+            // Pode definir um padrão, como o mês atual, ou retornar um erro.
+            // Por enquanto, o filtro de companyId já está lá.
+            console.log("Backend: Nenhuma data ou mês/ano fornecido para filtro inicial.");
         }
 
-        // 2. NOVO: Lógica de Busca / Filtro por Texto ou Data Específica usando $match na pipeline
+
+        // 3. Lógica de Busca / Filtro por Texto usando $match na pipeline
+        // Aplica a busca por texto SEMPRE que o parâmetro 'search' for fornecido,
+        // trabalhando em conjunto com o filtro de data (se houver).
         if (search) {
             const searchRegex = new RegExp(search, 'i'); // 'i' para case-insensitive
             
-            // Tenta interpretar o 'search' como uma data específica no formato YYYY-MM-DD
-            if (moment(search, 'YYYY-MM-DD', true).isValid()) {
-                const searchDateLocal = moment.tz(search, STUDIO_TIMEZONE).startOf('day');
-                const searchDateEndLocal = moment.tz(search, STUDIO_TIMEZONE).endOf('day');
-                const searchDateStartUTC = searchDateLocal.toDate();
-                const searchDateEndUTC = searchDateEndLocal.toDate();
-
-                // Se for uma data, sobrescreve o filtro de dataAgendamento para um dia específico
-                matchQuery.dataAgendamento = { $gte: searchDateStartUTC, $lte: searchDateEndUTC };
-                // Remove qualquer $or de busca por texto para não conflitar
-                delete matchQuery.$or;
-            } else {
-                // Se não for uma data específica, aplica a busca por texto em múltiplos campos
-                matchQuery.$or = [
-                    // Cliente populado (campo renomeado para 'clienteInfo.nome' após $lookup)
-                    { 'clienteInfo.nome': searchRegex },
-                    { profissional: searchRegex },            // Campo direto no Agendamento
-                    { sala: searchRegex },                    // Campo direto no Agendamento
-                    { 'procedimentos.nome': searchRegex }    // Campo de array de objetos embutidos no Agendamento
-                ];
-            }
+            matchQuery.$or = [
+                // Cliente populado (campo renomeado para 'clienteInfo.nome' após $lookup)
+                { 'clienteInfo.nome': searchRegex },
+                { profissional: searchRegex },            
+                { sala: searchRegex },                    
+                { 'procedimentos.nome': searchRegex }    
+            ];
+            console.log(`Backend: Adicionando filtro de texto: "${search}"`);
         }
         
         const pipeline = [
@@ -79,9 +88,15 @@ router.get('/', async (req, res) => {
             { $unwind: { path: '$clienteInfo', preserveNullAndEmptyArrays: true } },
 
             // Stage 4: Aplicar os filtros de data e busca por texto no conjunto já "populado"
-            { $match: matchQuery },
+            // Reconstroi o matchQuery para não usar companyId duas vezes (já foi aplicado no Stage 1)
+            { 
+                $match: { 
+                    ... (matchQuery.dataAgendamento ? { dataAgendamento: matchQuery.dataAgendamento } : {}),
+                    ... (matchQuery.$or ? { $or: matchQuery.$or } : {})
+                } 
+            },
 
-            // Stage 5: Ordenar os resultados (do mais recente para o mais antigo)
+            // Stage 5: Ordenar os resultados (do mais antigo para o mais recente - para listagem diária)
             { $sort: sortOption },
 
             // Stage 6: Projetar os campos finais para o formato esperado pelo frontend
@@ -109,6 +124,64 @@ router.get('/', async (req, res) => {
         res.status(500).json({ message: 'Erro interno do servidor ao buscar agendamentos.' });
     }
 });
+
+// NOVA ROTA: Retorna os dias do mês com agendamentos para marcadores no calendário
+router.get('/datas-com-agendamento', async (req, res) => {
+    try {
+        const { mes, ano } = req.query;
+        if (!mes || !ano) {
+            return res.status(400).json({ message: "Parâmetros 'mes' e 'ano' são obrigatórios." });
+        }
+
+        const mesNumero = parseInt(mes, 10);
+        const anoNumero = parseInt(ano, 10);
+
+        // Calcula o início e o fim do mês no fuso horário do Studio para a consulta
+        const startOfMonthLocal = moment.tz(`${anoNumero}-${String(mesNumero).padStart(2, '0')}-01`, STUDIO_TIMEZONE).startOf('month');
+        const endOfMonthLocal = moment.tz(`${anoNumero}-${String(mesNumero).padStart(2, '0')}-01`, STUDIO_TIMEZONE).endOf('month');
+
+        const startOfMonthUTC = startOfMonthLocal.toDate();
+        const endOfMonthUTC = endOfMonthLocal.toDate();
+
+        const distinctDays = await Agendamento.aggregate([
+            {
+                $match: {
+                    companyId: new mongoose.Types.ObjectId(req.user.companyId), // Filtra pela empresa
+                    dataAgendamento: {
+                        $gte: startOfMonthUTC,
+                        $lte: endOfMonthUTC
+                    }
+                }
+            },
+            {
+                $project: {
+                    // Extrai o dia do mês (1 a 31) na timezone do Studio
+                    dayOfMonth: { $dayOfMonth: { date: "$dataAgendamento", timezone: STUDIO_TIMEZONE } }
+                }
+            },
+            {
+                $group: {
+                    _id: null,
+                    days: { $addToSet: "$dayOfMonth" } // Coleta os dias únicos
+                }
+            },
+            {
+                $project: {
+                    _id: 0,
+                    days: { $sortArray: { input: "$days", sortBy: 1 } } // Opcional: ordenar os dias
+                }
+            }
+        ]);
+
+        const daysWithAppointments = distinctDays.length > 0 ? distinctDays[0].days : [];
+        res.status(200).json(daysWithAppointments);
+
+    } catch (error) {
+        console.error("Erro no backend ao buscar dias com agendamento:", error);
+        res.status(500).json({ message: "Erro interno do servidor." });
+    }
+});
+
 
 // As outras rotas (summary/dashboard, /hoje, /relatorio, POST, PUT, DELETE, PATCH)
 // permanecem as mesmas que já foram corrigidas para o fuso horário do Studio e não precisam de alteração aqui.
