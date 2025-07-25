@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=0.75">
     <title>Dashboard</title>
     <link rel="stylesheet" href="/css/normalize.css">
     <link rel="stylesheet" href="/css/global.css">
@@ -77,10 +77,9 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/moment-timezone/0.5.34/moment-timezone-with-data.min.js"></script>
     <script>
-    const STUDIO_TIMEZONE = 'America/Sao_Paulo'; // Adicionado para consistência
+    const STUDIO_TIMEZONE = 'America/Sao_Paulo';
 
     document.addEventListener('DOMContentLoaded', () => {
-        // --- Lógica para carregar o nome da empresa dinamicamente ---
         const companyName = localStorage.getItem('companyName');
         const sidebarCompanyNameElement = document.getElementById('sidebarCompanyName');
         if (companyName) {
@@ -94,9 +93,6 @@
                 sidebarCompanyNameElement.textContent = "Studio Je Marqui";
             }
         }
-        // --- FIM DA LÓGICA DE NOME DA EMPRESA ---
-
-        // --- Lógica do menu hambúrguer diretamente no dashboard.html ---
         const menuToggle = document.getElementById('menuToggle');
         const sidebar = document.getElementById('sidebar');
 
@@ -109,10 +105,7 @@
         } else {
             console.warn("dashboard.html: Elementos do menu hambúrguer (menuToggle ou sidebar) não encontrados.");
         }
-        // --- FIM DA LÓGICA DO MENU HAMBÚRGUER ---
-
-
-        // --- Elementos para popular os dados dos cards ---
+    
         const agendamentosHojeCountEl = document.getElementById('agendamentosHojeCount');
         const agendamentosSemanaCountEl = document.getElementById('agendamentosSemanaCount');
         const agendamentosConfirmadosCountEl = document.getElementById('agendamentosConfirmadosCount');
@@ -120,7 +113,6 @@
         const agendamentosDoDiaListEl = document.getElementById('agendamentosDoDiaList');
 
 
-        // --- Função para buscar dados do Dashboard ---
         async function fetchDashboardData() {
             console.log("dashboard.html: Buscando dados do dashboard...");
             const token = localStorage.getItem('token');
@@ -138,37 +130,47 @@
             }
 
             try {
-                const response = await fetch('/api/dashboard', {
+                // TENTATIVA DE CORREÇÃO: Mudar a URL da API para as contagens
+                const summaryResponse = await fetch('/api/agendamentos/dashboard/summary', { // Alterado o path
                     headers: {
                         'Authorization': `Bearer ${token}`
                     }
                 });
-
-                if (response.status === 401 || response.status === 403) {
-                    console.error("dashboard.html: Não autorizado ao buscar dados do dashboard. Redirecionando para login.");
-                    if (typeof logoutUser === 'function') logoutUser();
-                    return;
+                if (!summaryResponse.ok) { // Verifica se a resposta HTTP foi bem-sucedida (status 2xx)
+                    const errorText = await summaryResponse.text(); // Pega a resposta como texto para debug
+                    console.error("Erro na resposta HTTP para summary:", summaryResponse.status, errorText);
+                    throw new Error(`Erro na API de resumo: ${summaryResponse.status} ${summaryResponse.statusText}. Resposta: ${errorText.substring(0, 100)}...`);
                 }
+                const summaryData = await summaryResponse.json();
+                console.log("dashboard.html: Dados de resumo recebidos:", summaryData);
 
-                const data = await response.json();
-                console.log("dashboard.html: Dados do dashboard recebidos:", data);
+                agendamentosHojeCountEl.textContent = summaryData.hoje || 0;
+                agendamentosSemanaCountEl.textContent = summaryData.semana || 0;
+                agendamentosConfirmadosCountEl.textContent = summaryData.confirmados || 0;
+                agendamentosConcluidosCountEl.textContent = summaryData.concluidos || 0;
 
-                // As contagens já vêm do backend corretamente formatadas, não precisam de ajuste de fuso aqui.
-                agendamentosHojeCountEl.textContent = data.agendamentosHojeCount || 0;
-                agendamentosSemanaCountEl.textContent = data.agendamentosSemanaCount || 0;
-                agendamentosConfirmadosCountEl.textContent = data.agendamentosConfirmadosCount || 0;
-                agendamentosConcluidosCountEl.textContent = data.agendamentosConcluidosCount || 0;
+                // TENTATIVA DE CORREÇÃO: Mudar a URL da API para a listagem detalhada
+                agendamentosDoDiaListEl.innerHTML = '<p>Carregando agendamentos do dia...</p>';
+                const dailyListResponse = await fetch('/api/agendamentos/hoje', { // Mantido, mas verificado
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                if (!dailyListResponse.ok) { // Verifica se a resposta HTTP foi bem-sucedida (status 2xx)
+                    const errorText = await dailyListResponse.text(); // Pega a resposta como texto para debug
+                    console.error("Erro na resposta HTTP para agendamentos hoje:", dailyListResponse.status, errorText);
+                    throw new Error(`Erro na API de agendamentos hoje: ${dailyListResponse.status} ${dailyListResponse.statusText}. Resposta: ${errorText.substring(0, 100)}...`);
+                }
+                const agendamentosDoDia = await dailyListResponse.json();
+                console.log("dashboard.html: Agendamentos do dia recebidos:", agendamentosDoDia);
 
                 agendamentosDoDiaListEl.innerHTML = '';
-                if (Array.isArray(data.agendamentosDoDiaList) && data.agendamentosDoDiaList.length > 0) {
-                    data.agendamentosDoDiaList.forEach(ag => {
-                        // --- CORREÇÃO: Usar moment-timezone para exibir a data/hora no fuso do estúdio ---
-                        // ag.dataAgendamento vem como uma string ISO de data/hora UTC do backend
+                if (Array.isArray(agendamentosDoDia) && agendamentosDoDia.length > 0) {
+                    agendamentosDoDia.forEach(ag => {
                         const agendamentoMomentLocal = moment.utc(ag.dataAgendamento).tz(STUDIO_TIMEZONE);
                         
                         const dataFormatada = agendamentoMomentLocal.format('DD/MM/YYYY');
                         const horaFormatada = agendamentoMomentLocal.format('HH:mm');
-                        // --- FIM DA CORREÇÃO ---
 
                         const item = document.createElement('div');
                         item.className = 'activity-item'; 
@@ -192,12 +194,15 @@
                 agendamentosConfirmadosCountEl.textContent = 'Erro';
                 agendamentosConcluidosCountEl.textContent = 'Erro';
                 agendamentosDoDiaListEl.innerHTML = '<p style="color:red;">Erro ao carregar agendamentos.</p>';
+                // Se a função logoutUser estiver disponível globalmente, chame-a
+                if (typeof logoutUser === 'function') {
+                    // logoutUser(); // Descomente se quiser que deslogue em erro de API
+                }
             }
         }
 
         fetchDashboardData();
 
-        // --- Lógica do Temporizador de Inatividade (no final do DOMContentLoaded) ---
         const INACTIVITY_TIME = 10 * 60 * 1000;
         let timeoutId;
 
@@ -221,9 +226,7 @@
         document.addEventListener('keypress', resetInactivityTimer);
         document.addEventListener('click', resetInactivityTimer);
         document.addEventListener('scroll', resetInactivityTimer);
-        // --- FIM DA LÓGICA DE INATIVIDADE ---
 
-        // --- Lógica do Modal de Aniversariantes: Exibir APENAS na primeira carga após login ---
         const birthdayModal = document.getElementById('birthdayModal');
         const closeBirthdayModalBtn = document.getElementById('closeBirthdayModal');
         const birthdayListElement = document.getElementById('birthdayList');
@@ -257,11 +260,10 @@
                     }
                 });
 
-                if (response.status === 401 || response.status === 403) {
-                    console.error("Não autorizado ao buscar aniversariantes.");
-                    if (birthdayModal) birthdayModal.style.display = 'none';
-                    console.log("Modal escondido: Não autorizado.");
-                    return;
+                if (!response.ok) { // Verifica se a resposta HTTP foi bem-sucedida
+                    const errorText = await response.text();
+                    console.error("Erro na resposta HTTP para aniversariantes:", response.status, errorText);
+                    throw new Error(`Erro na API de aniversariantes: ${response.status} ${response.statusText}. Resposta: ${errorText.substring(0, 100)}...`);
                 }
 
                 const data = await response.json();
@@ -272,12 +274,9 @@
                     data.forEach(client => {
                         const clientDiv = document.createElement('div');
                         clientDiv.className = 'birthday-item';
-                        // --- CORREÇÃO: Usar moment-timezone para exibir a data de nascimento corretamente ---
-                        // A data de nascimento pode vir sem informações de hora/fuso, então focamos no dia e mês
                         const dataNascimentoMoment = moment.utc(client.dataNascimento).tz(STUDIO_TIMEZONE);
                         const diaNascimento = dataNascimentoMoment.format('DD');
                         const mesNascimento = dataNascimentoMoment.format('MM');
-                        // --- FIM DA CORREÇÃO ---
 
                         clientDiv.innerHTML = `
                             <p><strong>${client.nome}</strong></p>
@@ -325,7 +324,6 @@
         }
 
         fetchBirthdays();
-        // --- FIM DA LÓGICA DO MODAL DE ANIVERSARIANTES ---
     });
     </script>
 </body>
